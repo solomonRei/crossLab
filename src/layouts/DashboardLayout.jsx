@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation, Outlet } from 'react-router-dom'
+import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom'
 import { 
   Home, 
   FolderOpen, 
@@ -12,14 +12,16 @@ import {
   Moon,
   Sun,
   Menu,
-  X
+  X,
+  LogOut
 } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Avatar, AvatarImage, AvatarFallback } from '../components/ui/Avatar'
 import { Badge } from '../components/ui/Badge'
 import { NotificationCenter } from '../components/NotificationCenter'
 import { useNotifications } from '../hooks/useNotifications'
-import { users } from '../data/mockData'
+import { useAuth } from '../contexts/AuthContext'
+import { getAvatarFallback } from '../lib/utils'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -31,14 +33,14 @@ const navigation = [
 
 export function DashboardLayout() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, logout } = useAuth()
   const [darkMode, setDarkMode] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [notificationCenterOpen, setNotificationCenterOpen] = useState(false)
   
-  const currentUser = users[0]
-  
-  // Initialize notifications
-  const { getCounts } = useNotifications(currentUser.id)
+  // Initialize notifications with user ID
+  const { getCounts } = useNotifications(user?.id || 'anonymous')
   const { unread: unreadCount } = getCounts()
 
   const toggleDarkMode = () => {
@@ -49,6 +51,25 @@ export function DashboardLayout() {
   const handleNotificationClick = () => {
     setNotificationCenterOpen(!notificationCenterOpen)
   }
+
+  const handleLogout = () => {
+    logout()
+    navigate('/')
+  }
+
+  // Default user data if not available from API
+  const currentUser = user || {
+    id: 'default',
+    firstName: 'User',
+    lastName: '',
+    email: 'user@example.com',
+    role: 'User',
+    avatar: null
+  }
+
+  const displayName = currentUser.firstName && currentUser.lastName 
+    ? `${currentUser.firstName} ${currentUser.lastName}`
+    : currentUser.firstName || currentUser.email || 'User'
 
   return (
     <div className="flex h-screen bg-background">
@@ -98,19 +119,26 @@ export function DashboardLayout() {
           <div className="p-4 border-t">
             <div className="flex items-center space-x-3">
               <Avatar>
-                <AvatarImage src={currentUser.avatar} alt={currentUser.name} />
-                <AvatarFallback>{currentUser.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                <AvatarImage src={currentUser.avatar} alt={displayName} />
+                <AvatarFallback>{getAvatarFallback(displayName)}</AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <p className="text-sm font-medium">{currentUser.name}</p>
-                <p className="text-xs text-muted-foreground">{currentUser.role}</p>
+                <p className="text-sm font-medium">{displayName}</p>
+                <p className="text-xs text-muted-foreground">{currentUser.role || 'User'}</p>
               </div>
             </div>
-            <div className="mt-3 flex items-center justify-between">
-              <Badge variant="secondary" className="text-xs">
-                Level {currentUser.level}
-              </Badge>
-              <span className="text-xs text-muted-foreground">{currentUser.xp} XP</span>
+            
+            {/* Logout Button */}
+            <div className="mt-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="w-full justify-start text-muted-foreground hover:text-foreground"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
             </div>
           </div>
         </div>
@@ -161,9 +189,11 @@ export function DashboardLayout() {
             <Button variant="ghost" size="icon">
               <MessageCircle className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon">
-              <Settings className="h-5 w-5" />
-            </Button>
+            <Link to="/settings/notifications">
+              <Button variant="ghost" size="icon">
+                <Settings className="h-5 w-5" />
+              </Button>
+            </Link>
           </div>
         </header>
 
