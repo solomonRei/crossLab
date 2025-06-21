@@ -43,18 +43,20 @@ const GoogleIcon = ({ className }) => (
 const USMIcon = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
     <rect width="24" height="24" rx="4" fill="#1E3A8A"/>
-    <path d="M12 6L8 18h2l1-3h6l1 3h2L16 6h-4zm-1 7l1.5-4.5L14 13h-3z" fill="white"/>
-    <circle cx="12" cy="4" r="1.5" fill="#FCD34D"/>
+    <text x="12" y="16" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold" fontFamily="Arial, sans-serif">USM</text>
+    <rect x="4" y="6" width="16" height="1.5" fill="white"/>
+    <rect x="4" y="19" width="16" height="1" fill="white"/>
+    <circle cx="12" cy="4" r="1" fill="#FCD34D"/>
   </svg>
 )
 
 // UTM Icon Component  
 const UTMIcon = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
-    <rect width="24" height="24" rx="4" fill="#059669"/>
-    <path d="M8 6h8v2H8V6zm0 4h8v2H8v-2zm0 4h6v2H8v-2z" fill="white"/>
-    <path d="M6 6h1v12H6V6zm11 0h1v12h-1V6z" fill="#FCD34D"/>
-    <circle cx="12" cy="3" r="1" fill="#FCD34D"/>
+    <rect width="24" height="24" rx="4" fill="#1E40AF"/>
+    <text x="12" y="16" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold" fontFamily="Arial, sans-serif">UTM</text>
+    <rect x="4" y="6" width="16" height="1.5" fill="white"/>
+    <rect x="4" y="19" width="16" height="1" fill="white"/>
   </svg>
 )
 
