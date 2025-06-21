@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
+import { Card, CardContent, CardHeader } from '../components/ui/Card'
 import { Input, Label } from '../components/ui/Input'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs'
 import { 
@@ -10,44 +10,99 @@ import {
   Lock, 
   Eye, 
   EyeOff, 
-  Chrome,
   GraduationCap,
   ChevronDown,
   ChevronUp,
-  Building2,
-  BookOpen,
-  Briefcase,
   User,
   ArrowLeft
 } from 'lucide-react'
+
+// Google Icon Component
+const GoogleIcon = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <path
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      fill="#4285F4"
+    />
+    <path
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      fill="#34A853"
+    />
+    <path
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+      fill="#FBBC05"
+    />
+    <path
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+      fill="#EA4335"
+    />
+  </svg>
+)
+
+// USM Icon Component
+const USMIcon = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <rect width="24" height="24" rx="4" fill="#1E3A8A"/>
+    <path d="M12 6L8 18h2l1-3h6l1 3h2L16 6h-4zm-1 7l1.5-4.5L14 13h-3z" fill="white"/>
+    <circle cx="12" cy="4" r="1.5" fill="#FCD34D"/>
+  </svg>
+)
+
+// UTM Icon Component  
+const UTMIcon = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <rect width="24" height="24" rx="4" fill="#059669"/>
+    <path d="M8 6h8v2H8V6zm0 4h8v2H8v-2zm0 4h6v2H8v-2z" fill="white"/>
+    <path d="M6 6h1v12H6V6zm11 0h1v12h-1V6z" fill="#FCD34D"/>
+    <circle cx="12" cy="3" r="1" fill="#FCD34D"/>
+  </svg>
+)
+
+// Moodle Icon Component
+const MoodleIcon = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <rect width="24" height="24" rx="4" fill="#F77F00"/>
+    <path d="M12 4c-4.4 0-8 3.6-8 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8zm0 14c-3.3 0-6-2.7-6-6s2.7-6 6-6 6 2.7 6 6-2.7 6-6 6z" fill="white"/>
+    <path d="M12 8c-2.2 0-4 1.8-4 4h2c0-1.1.9-2 2-2s2 .9 2 2-2 2-2 2v2c2.2 0 4-1.8 4-4s-1.8-4-4-4z" fill="white"/>
+  </svg>
+)
+
+// Microsoft Outlook Icon Component
+const OutlookIcon = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <rect x="2" y="4" width="20" height="16" rx="2" fill="#0078D4"/>
+    <path d="M12 8c-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z" fill="white"/>
+    <path d="M2 6l10 6 10-6" stroke="white" strokeWidth="1.5" fill="none"/>
+  </svg>
+)
 
 const universityProviders = [
   {
     id: 'usm',
     name: 'USM',
     fullName: 'Universitatea de Stat din Moldova',
-    icon: GraduationCap,
+    icon: USMIcon,
     color: 'bg-blue-600 hover:bg-blue-700'
   },
   {
     id: 'utm',
     name: 'UTM', 
     fullName: 'Universitatea Tehnică a Moldovei',
-    icon: Building2,
+    icon: UTMIcon,
     color: 'bg-green-600 hover:bg-green-700'
   },
   {
     id: 'moodle',
     name: 'Moodle',
     fullName: 'Moodle University Platform',
-    icon: BookOpen,
+    icon: MoodleIcon,
     color: 'bg-orange-600 hover:bg-orange-700'
   },
   {
     id: 'outlook',
     name: 'Outlook (.edu)',
     fullName: 'Microsoft Education SSO',
-    icon: Briefcase,
+    icon: OutlookIcon,
     color: 'bg-indigo-600 hover:bg-indigo-700'
   }
 ]
@@ -76,26 +131,31 @@ export function Auth() {
   const validateForm = () => {
     const newErrors = {}
 
-    if (!formData.email) {
+    // Email validation
+    if (!formData.email.trim()) {
       newErrors.email = 'Email is required'
     } else if (!validateEmail(formData.email)) {
       newErrors.email = 'Please enter a valid email'
     }
 
-    if (!formData.password) {
+    // Password validation
+    if (!formData.password.trim()) {
       newErrors.password = 'Password is required'
     } else if (formData.password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters'
     }
 
+    // Additional validation for signup
     if (activeTab === 'signup') {
-      if (!formData.firstName) {
+      if (!formData.firstName.trim()) {
         newErrors.firstName = 'First name is required'
       }
-      if (!formData.lastName) {
+      if (!formData.lastName.trim()) {
         newErrors.lastName = 'Last name is required'
       }
-      if (formData.password !== formData.confirmPassword) {
+      if (!formData.confirmPassword) {
+        newErrors.confirmPassword = 'Please confirm your password'
+      } else if (formData.password !== formData.confirmPassword) {
         newErrors.confirmPassword = 'Passwords do not match'
       }
       if (!formData.acceptTerms) {
@@ -105,7 +165,16 @@ export function Auth() {
 
     setErrors(newErrors)
     const isValid = Object.keys(newErrors).length === 0
-    console.log('Form validation result:', { isValid, errors: newErrors, formData })
+    console.log('Form validation result:', { 
+      activeTab, 
+      isValid, 
+      errors: newErrors, 
+      formData: {
+        ...formData,
+        password: formData.password ? '***' : '',
+        confirmPassword: formData.confirmPassword ? '***' : ''
+      }
+    })
     return isValid
   }
 
@@ -189,8 +258,8 @@ export function Auth() {
           <CardHeader className="space-y-4">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login" active={activeTab === 'login'}>Sign In</TabsTrigger>
-                <TabsTrigger value="signup" active={activeTab === 'signup'}>Sign Up</TabsTrigger>
+                <TabsTrigger value="login">Sign In</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
               </TabsList>
             </Tabs>
           </CardHeader>
@@ -383,7 +452,7 @@ export function Auth() {
                 onClick={() => handleOAuthLogin('google')}
                 disabled={isLoading}
               >
-                <Chrome className="h-4 w-4 mr-2" />
+                <GoogleIcon className="h-4 w-4 mr-2" />
                 Continue with Google
               </Button>
 
@@ -409,23 +478,27 @@ export function Auth() {
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="space-y-2 overflow-hidden"
+                      className="overflow-hidden"
                     >
-                      {universityProviders.map((provider) => (
-                        <Button
-                          key={provider.id}
-                          variant="outline"
-                          className={`w-full justify-start ${provider.color.replace('bg-', 'hover:bg-').replace('hover:bg-', 'border-')} border border-border hover:border-opacity-50 text-foreground hover:text-white transition-all`}
-                          onClick={() => handleUniversityLogin(provider)}
-                          disabled={isLoading}
-                        >
-                          <provider.icon className="h-4 w-4 mr-3" />
-                          <div className="text-left">
-                            <div className="font-medium">{provider.name}</div>
-                            <div className="text-xs opacity-90">{provider.fullName}</div>
-                          </div>
-                        </Button>
-                      ))}
+                      <div className="grid grid-cols-2 gap-2 p-2">
+                        {universityProviders.map((provider) => (
+                          <Button
+                            key={provider.id}
+                            variant="outline"
+                            className="h-auto p-3 justify-start text-left border border-border hover:border-primary/50 hover:bg-accent transition-all"
+                            onClick={() => handleUniversityLogin(provider)}
+                            disabled={isLoading}
+                          >
+                            <div className="flex items-center space-x-2 w-full">
+                              <provider.icon className="h-4 w-4 flex-shrink-0 text-primary" />
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium text-sm truncate">{provider.name}</div>
+                                <div className="text-xs text-muted-foreground truncate">{provider.fullName}</div>
+                              </div>
+                            </div>
+                          </Button>
+                        ))}
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
