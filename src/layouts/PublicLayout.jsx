@@ -16,12 +16,6 @@ export function PublicLayout() {
           </Link>
 
           <nav className="hidden md:flex items-center space-x-8">
-            <Link to="/projects" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Browse Projects
-            </Link>
-            <Link to="/showcase" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Showcase
-            </Link>
             <Link to="/about" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               About
             </Link>
@@ -62,10 +56,8 @@ export function PublicLayout() {
             <div>
               <h3 className="font-semibold mb-3">Platform</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link to="/projects" className="hover:text-foreground transition-colors">Browse Projects</Link></li>
-                <li><Link to="/showcase" className="hover:text-foreground transition-colors">Showcase</Link></li>
-                <li><Link to="/teams" className="hover:text-foreground transition-colors">Find Teams</Link></li>
-                <li><Link to="/mentors" className="hover:text-foreground transition-colors">Mentors</Link></li>
+                <li><Link to="/about" className="hover:text-foreground transition-colors">About Us</Link></li>
+                <li><Link to="/auth" className="hover:text-foreground transition-colors">Join Now</Link></li>
               </ul>
             </div>
 
