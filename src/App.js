@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
+import { ProtectedRoute } from './components/ProtectedRoute'
 import { PublicLayout } from './layouts/PublicLayout'
 import { DashboardLayout } from './layouts/DashboardLayout'
 
@@ -15,44 +17,70 @@ import './index.css'
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Public routes */}
-        <Route path="/" element={<PublicLayout />}>
-          <Route index element={<Home />} />
-          <Route path="auth" element={<Auth />} />
-        </Route>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<PublicLayout />}>
+            <Route index element={<Home />} />
+            <Route path="auth" element={<Auth />} />
+          </Route>
 
-        {/* Dashboard routes - authenticated */}
-        <Route path="/dashboard" element={<DashboardLayout />}>
-          <Route index element={<Navigate to="/projects" replace />} />
-        </Route>
-        
-        <Route path="/projects" element={<DashboardLayout />}>
-          <Route index element={<Projects />} />
-          <Route path=":id" element={<ProjectView />} />
-        </Route>
-        
-        <Route path="/profile" element={<DashboardLayout />}>
-          <Route index element={<Profile />} />
-        </Route>
-        
-        <Route path="/showcase" element={<DashboardLayout />}>
-          <Route index element={<Showcase />} />
-        </Route>
-        
-        <Route path="/reviews" element={<DashboardLayout />}>
-          <Route index element={<Review />} />
-        </Route>
+          {/* Dashboard routes - authenticated */}
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Navigate to="/projects" replace />} />
+          </Route>
+          
+          <Route path="/projects" element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Projects />} />
+            <Route path=":id" element={<ProjectView />} />
+          </Route>
+          
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Profile />} />
+          </Route>
+          
+          <Route path="/showcase" element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Showcase />} />
+          </Route>
+          
+          <Route path="/reviews" element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Review />} />
+          </Route>
 
-        <Route path="/settings" element={<DashboardLayout />}>
-          <Route path="notifications" element={<NotificationSettings />} />
-        </Route>
-        
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }>
+            <Route path="notifications" element={<NotificationSettings />} />
+          </Route>
+          
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   )
 }
 
