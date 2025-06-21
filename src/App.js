@@ -4,6 +4,7 @@ import { DashboardLayout } from './layouts/DashboardLayout'
 
 // Pages
 import { Home } from './pages/Home'
+import { Auth } from './pages/Auth'
 import { Projects } from './pages/Projects'
 import { ProjectView } from './pages/ProjectView'
 import { Profile } from './pages/Profile'
@@ -16,6 +17,9 @@ function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/login" element={<Auth />} />
+        <Route path="/signup" element={<Auth />} />
         
         {/* Dashboard routes - authenticated */}
         <Route path="/dashboard" element={<DashboardLayout><Projects /></DashboardLayout>} />

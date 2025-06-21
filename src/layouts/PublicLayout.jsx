@@ -29,10 +29,10 @@ export function PublicLayout({ children }) {
 
           <div className="flex items-center space-x-4">
             <Button variant="ghost" asChild>
-              <Link to="/login">Sign In</Link>
+              <Link to="/auth">Sign In</Link>
             </Button>
             <Button asChild>
-              <Link to="/signup">Get Started</Link>
+              <Link to="/auth">Get Started</Link>
             </Button>
           </div>
         </div>

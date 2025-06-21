@@ -76,7 +76,7 @@ export function Home() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" asChild className="group">
-                <Link to="/projects">
+                <Link to="/auth">
                   Join a Team
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
@@ -201,7 +201,7 @@ export function Home() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" asChild>
-                  <Link to="/signup">
+                  <Link to="/auth">
                     Start Your Journey
                     <Heart className="ml-2 h-4 w-4" />
                   </Link>
