@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Input, Label } from '../components/ui/Input'
@@ -53,6 +53,7 @@ const universityProviders = [
 ]
 
 export function Auth() {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('login')
   const [showPassword, setShowPassword] = useState(false)
   const [showUniversityOptions, setShowUniversityOptions] = useState(false)
@@ -103,21 +104,30 @@ export function Auth() {
     }
 
     setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    const isValid = Object.keys(newErrors).length === 0
+    console.log('Form validation result:', { isValid, errors: newErrors, formData })
+    return isValid
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!validateForm()) return
+    console.log('Form submitted, validating...', { formData, activeTab })
+    
+    if (!validateForm()) {
+      console.log('Validation failed:', errors)
+      return
+    }
 
+    console.log('Validation passed, submitting...')
     setIsLoading(true)
     
     // Simulate API call
     setTimeout(() => {
-      console.log(`${activeTab} form submitted:`, formData)
+      console.log(`${activeTab} form submitted successfully:`, formData)
       setIsLoading(false)
-      // Redirect to dashboard on success
-      window.location.href = '/dashboard'
+      // Navigate to dashboard on success
+      console.log('Navigating to dashboard...')
+      navigate('/dashboard')
     }, 1500)
   }
 
@@ -135,7 +145,7 @@ export function Auth() {
     // Simulate OAuth redirect
     setTimeout(() => {
       setIsLoading(false)
-      window.location.href = '/dashboard'
+      navigate('/dashboard')
     }, 2000)
   }
 
@@ -146,7 +156,7 @@ export function Auth() {
     // Simulate university SSO redirect
     setTimeout(() => {
       setIsLoading(false)
-      window.location.href = '/dashboard'
+      navigate('/dashboard')
     }, 2000)
   }
 
