@@ -129,15 +129,6 @@ export function Review() {
     )
   }
 
-  const handleSubmitReview = (reviewData) => {
-    setReviews(prev => [...prev, { 
-      ...reviewData, 
-      id: Date.now(),
-      date: new Date().toISOString().split('T')[0]
-    }])
-    setShowReviewForm(false)
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
