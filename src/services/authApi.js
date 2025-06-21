@@ -1,9 +1,17 @@
-import { logApiRequest } from '../config/devTools'
+import { logApiRequest, logError, devLog } from '../config/devTools'
 
-// API Configuration with multiple endpoints
+// API Configuration
 const API_CONFIG = {
-  https: process.env.REACT_APP_API_URL || 'https://192.168.0.56:7001',
-  http: process.env.REACT_APP_API_URL_HTTP || 'http://192.168.0.56:5059'
+  https: {
+    baseUrl: process.env.REACT_APP_API_URL || 'https://192.168.0.56:7001',
+    mode: 'https',
+    port: 7001
+  },
+  http: {
+    baseUrl: process.env.REACT_APP_API_URL_HTTP || 'http://192.168.0.56:5059',
+    mode: 'http',
+    port: 5059
+  }
 }
 
 // Get current API mode from localStorage or environment
@@ -11,13 +19,8 @@ const getCurrentApiMode = () => {
   return localStorage.getItem('api_mode') || process.env.REACT_APP_API_MODE || 'http'
 }
 
-// Get current API base URL
-const getApiBaseUrl = () => {
-  const mode = getCurrentApiMode()
-  return API_CONFIG[mode] || API_CONFIG.http
-}
-
-class AuthApiError extends Error {
+// Custom error class for API errors
+export class AuthApiError extends Error {
   constructor(message, status, errors = []) {
     super(message)
     this.name = 'AuthApiError'
@@ -28,107 +31,136 @@ class AuthApiError extends Error {
 
 class AuthApiService {
   constructor() {
-    this.baseUrl = getApiBaseUrl()
-    this.token = localStorage.getItem('auth_token')
+    this.currentMode = getCurrentApiMode()
+    this.baseUrl = API_CONFIG[this.currentMode].baseUrl
+    this.token = localStorage.getItem('token')
+    
+    // Log initial configuration
+    devLog('AuthApiService initialized:', {
+      mode: this.currentMode,
+      baseUrl: this.baseUrl,
+      hasToken: !!this.token
+    })
+    
+    // Make service globally available for debugging
+    if (process.env.NODE_ENV === 'development') {
+      window.__CROSSLAB_AUTH_SERVICE__ = this
+    }
   }
 
-  // Switch API endpoint method
+  // Get current API configuration
+  getApiInfo() {
+    return {
+      mode: this.currentMode,
+      baseUrl: this.baseUrl,
+      available: API_CONFIG,
+      hasToken: !!this.token
+    }
+  }
+
+  // Switch API mode
   switchApiMode(mode) {
     if (!API_CONFIG[mode]) {
-      throw new Error(`Invalid API mode: ${mode}. Available modes: ${Object.keys(API_CONFIG).join(', ')}`)
+      throw new Error(`Invalid API mode: ${mode}`)
     }
+
+    const oldMode = this.currentMode
+    this.currentMode = mode
+    this.baseUrl = API_CONFIG[mode].baseUrl
     
     localStorage.setItem('api_mode', mode)
-    this.baseUrl = API_CONFIG[mode]
-    console.log(`API switched to ${mode.toUpperCase()} mode: ${this.baseUrl}`)
+    
+    devLog(`API mode switched from ${oldMode} to ${mode}`, {
+      oldUrl: API_CONFIG[oldMode].baseUrl,
+      newUrl: this.baseUrl
+    })
+    
     return this.baseUrl
   }
 
-  // Get current API info
-  getApiInfo() {
-    const mode = getCurrentApiMode()
-    return {
-      mode,
-      baseUrl: this.baseUrl,
-      available: API_CONFIG
-    }
-  }
-
+  // Set token
   setToken(token) {
     this.token = token
     if (token) {
-      localStorage.setItem('auth_token', token)
+      localStorage.setItem('token', token)
+      devLog('Token set in localStorage')
     } else {
-      localStorage.removeItem('auth_token')
+      localStorage.removeItem('token')
+      devLog('Token removed from localStorage')
     }
   }
 
+  // Get token
   getToken() {
-    return this.token || localStorage.getItem('auth_token')
+    return this.token
   }
 
-  async makeRequest(endpoint, options = {}) {
-    const url = `${this.baseUrl}${endpoint}`
-    const token = this.getToken()
-
+  // HTTP client with automatic token handling
+  async request(endpoint, options = {}) {
+    const url = `${this.baseUrl}/api/v1${endpoint}`
+    
     const config = {
       headers: {
         'Content-Type': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
       ...options,
     }
 
-    // Log API request in development
-    logApiRequest(options.method || 'GET', url, options.body ? JSON.parse(options.body) : null)
+    // Add authorization header if token exists
+    if (this.token) {
+      config.headers.Authorization = `Bearer ${this.token}`
+    }
+
+    // Log API request
+    logApiRequest(config.method || 'GET', url, options.body ? JSON.parse(options.body) : null)
 
     try {
-      console.log(`Making ${options.method || 'GET'} request to: ${url}`)
-      const response = await fetch(url, config)
+      devLog(`Making ${config.method || 'GET'} request to:`, url)
       
-      // Handle non-JSON responses
-      let data
-      try {
-        data = await response.json()
-      } catch (parseError) {
-        // If JSON parsing fails, use response text
-        const text = await response.text()
-        data = { message: text || `HTTP ${response.status}`, raw: text }
-      }
+      const response = await fetch(url, config)
+      const data = await response.json()
+
+      // Log response
+      devLog(`API Response (${response.status}):`, data)
 
       if (!response.ok) {
-        throw new AuthApiError(
-          data.message || `HTTP ${response.status}: ${response.statusText}`,
-          response.status,
-          data.errors || []
-        )
+        // Handle different error formats
+        const errorMessage = data.message || data.error || `HTTP ${response.status}`
+        const errors = data.errors || data.validationErrors || []
+        
+        logError(new Error(errorMessage), `API ${config.method || 'GET'} ${endpoint}`)
+        throw new AuthApiError(errorMessage, response.status, errors)
       }
 
-      return data
+      return {
+        success: true,
+        data: data,
+        status: response.status
+      }
     } catch (error) {
       if (error instanceof AuthApiError) {
         throw error
       }
-      
+
       // Network or other errors
-      console.error('API Request Error:', error)
-      throw new AuthApiError(
-        `Network error or server unavailable: ${error.message}`,
-        0,
-        [error.message]
-      )
+      const message = error.message || 'Network error'
+      logError(error, `Network error for ${config.method || 'GET'} ${endpoint}`)
+      
+      throw new AuthApiError(message, 0, [])
     }
   }
 
   // Authentication endpoints
-  async login(loginRequest) {
-    const response = await this.makeRequest('/api/v1/Auth/login', {
+  async login(credentials) {
+    devLog('Attempting login for:', credentials.email)
+    
+    const response = await this.request('/Auth/login', {
       method: 'POST',
-      body: JSON.stringify(loginRequest)
+      body: JSON.stringify(credentials),
     })
 
-    // Set token if login successful
+    // Store token if login successful
     if (response.success && response.data?.token) {
       this.setToken(response.data.token)
     }
@@ -136,43 +168,40 @@ class AuthApiService {
     return response
   }
 
-  async register(registerRequest) {
-    const response = await this.makeRequest('/api/v1/Auth/register', {
+  async register(userData) {
+    devLog('Attempting registration for:', userData.email)
+    
+    return await this.request('/Auth/register', {
       method: 'POST',
-      body: JSON.stringify(registerRequest)
+      body: JSON.stringify(userData),
     })
-
-    return response
   }
 
   async getCurrentUser() {
-    return await this.makeRequest('/api/v1/Auth/me', {
-      method: 'GET'
-    })
+    devLog('Fetching current user data')
+    
+    return await this.request('/Auth/me')
   }
 
   async getAllUsers() {
-    return await this.makeRequest('/api/v1/Auth/users', {
-      method: 'GET'
-    })
+    devLog('Fetching all users')
+    
+    return await this.request('/Auth/users')
   }
 
   async getUserById(id) {
-    return await this.makeRequest(`/api/v1/Auth/users/${id}`, {
-      method: 'GET'
-    })
+    devLog('Fetching user by ID:', id)
+    
+    return await this.request(`/Auth/users/${id}`)
   }
 
+  // Logout - clear token
   logout() {
+    devLog('User logging out')
     this.setToken(null)
-    // Don't clear API mode on logout
-  }
-
-  isAuthenticated() {
-    return !!this.getToken()
   }
 }
 
 // Export singleton instance
-const authApiService = new AuthApiService()
-export { authApiService, AuthApiError } 
+export const authApiService = new AuthApiService()
+export default authApiService 
