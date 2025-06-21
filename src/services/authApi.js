@@ -34,12 +34,15 @@ class AuthApiService {
     this.currentMode = getCurrentApiMode()
     this.baseUrl = API_CONFIG[this.currentMode].baseUrl
     this.token = localStorage.getItem('token')
+    this.refreshToken = localStorage.getItem('refreshToken')
+    this.refreshPromise = null // Track ongoing refresh requests
     
     // Log initial configuration
     devLog('AuthApiService initialized:', {
       mode: this.currentMode,
       baseUrl: this.baseUrl,
-      hasToken: !!this.token
+      hasToken: !!this.token,
+      hasRefreshToken: !!this.refreshToken
     })
     
     // Make service globally available for debugging
@@ -54,7 +57,8 @@ class AuthApiService {
       mode: this.currentMode,
       baseUrl: this.baseUrl,
       available: API_CONFIG,
-      hasToken: !!this.token
+      hasToken: !!this.token,
+      hasRefreshToken: !!this.refreshToken
     }
   }
 
@@ -78,16 +82,32 @@ class AuthApiService {
     return this.baseUrl
   }
 
-  // Set token
-  setToken(token) {
-    this.token = token
-    if (token) {
-      localStorage.setItem('token', token)
-      devLog('Token set in localStorage')
+  // Set tokens
+  setTokens(accessToken, refreshToken = null) {
+    this.token = accessToken
+    if (accessToken) {
+      localStorage.setItem('token', accessToken)
+      devLog('Access token set in localStorage')
     } else {
       localStorage.removeItem('token')
-      devLog('Token removed from localStorage')
+      devLog('Access token removed from localStorage')
     }
+
+    if (refreshToken !== null) {
+      this.refreshToken = refreshToken
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken)
+        devLog('Refresh token set in localStorage')
+      } else {
+        localStorage.removeItem('refreshToken')
+        devLog('Refresh token removed from localStorage')
+      }
+    }
+  }
+
+  // Set token (legacy method, kept for compatibility)
+  setToken(token) {
+    this.setTokens(token, null)
   }
 
   // Get token
@@ -95,7 +115,51 @@ class AuthApiService {
     return this.token
   }
 
-  // HTTP client with automatic token handling
+  // Get refresh token
+  getRefreshToken() {
+    return this.refreshToken
+  }
+
+  // Refresh access token using refresh token
+  async refreshAccessToken() {
+    // Prevent multiple concurrent refresh requests
+    if (this.refreshPromise) {
+      devLog('Refresh already in progress, waiting for existing request')
+      return this.refreshPromise
+    }
+
+    if (!this.refreshToken) {
+      throw new AuthApiError('No refresh token available', 401)
+    }
+
+    devLog('Attempting to refresh access token')
+
+    this.refreshPromise = this.request('/Auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken: this.refreshToken }),
+      skipTokenRefresh: true // Prevent infinite loop
+    }).then(response => {
+      if (response.success && response.data?.token) {
+        const newRefreshToken = response.data.refreshToken || this.refreshToken
+        this.setTokens(response.data.token, newRefreshToken)
+        devLog('Access token refreshed successfully')
+        return response.data.token
+      } else {
+        throw new AuthApiError('Failed to refresh token', 401)
+      }
+    }).catch(error => {
+      devLog('Token refresh failed:', error.message)
+      // Clear tokens on refresh failure
+      this.setTokens(null, null)
+      throw error
+    }).finally(() => {
+      this.refreshPromise = null
+    })
+
+    return this.refreshPromise
+  }
+
+  // HTTP client with automatic token handling and refresh
   async request(endpoint, options = {}) {
     const url = `${this.baseUrl}/api/v1${endpoint}`
     
@@ -123,6 +187,45 @@ class AuthApiService {
 
       // Log response
       devLog(`API Response (${response.status}):`, data)
+
+      // Handle 401 Unauthorized - try to refresh token
+      if (response.status === 401 && this.refreshToken && !options.skipTokenRefresh) {
+        devLog('Received 401, attempting token refresh')
+        
+        try {
+          await this.refreshAccessToken()
+          
+          // Retry original request with new token
+          devLog('Retrying original request with new token')
+          config.headers.Authorization = `Bearer ${this.token}`
+          
+          const retryResponse = await fetch(url, config)
+          const retryData = await retryResponse.json()
+          
+          devLog(`Retry Response (${retryResponse.status}):`, retryData)
+          
+          if (!retryResponse.ok) {
+            const errorMessage = retryData.message || retryData.error || `HTTP ${retryResponse.status}`
+            const errors = retryData.errors || retryData.validationErrors || []
+            
+            logError(new Error(errorMessage), `API ${config.method || 'GET'} ${endpoint} (retry)`)
+            throw new AuthApiError(errorMessage, retryResponse.status, errors)
+          }
+          
+          return {
+            success: true,
+            data: retryData,
+            status: retryResponse.status
+          }
+        } catch (refreshError) {
+          devLog('Token refresh failed, throwing original 401 error')
+          const errorMessage = data.message || data.error || `HTTP ${response.status}`
+          const errors = data.errors || data.validationErrors || []
+          
+          logError(new Error(errorMessage), `API ${config.method || 'GET'} ${endpoint}`)
+          throw new AuthApiError(errorMessage, response.status, errors)
+        }
+      }
 
       if (!response.ok) {
         // Handle different error formats
@@ -160,9 +263,10 @@ class AuthApiService {
       body: JSON.stringify(credentials),
     })
 
-    // Store token if login successful
+    // Store tokens if login successful
     if (response.success && response.data?.token) {
-      this.setToken(response.data.token)
+      const refreshToken = response.data.refreshToken
+      this.setTokens(response.data.token, refreshToken)
     }
 
     return response
@@ -195,10 +299,15 @@ class AuthApiService {
     return await this.request(`/Auth/users/${id}`)
   }
 
-  // Logout - clear token
+  // Logout - clear tokens
   logout() {
     devLog('User logging out')
-    this.setToken(null)
+    this.setTokens(null, null)
+  }
+
+  // Manual token refresh (for external use)
+  async refreshToken() {
+    return await this.refreshAccessToken()
   }
 }
 
