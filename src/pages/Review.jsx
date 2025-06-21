@@ -39,7 +39,6 @@ export function Review() {
 
   const currentUser = users[0]
   
-  // Mock review data
   const pendingReviews = [
     {
       id: 1,
@@ -100,13 +99,6 @@ export function Review() {
   }
 
   const submitReview = () => {
-    // Handle review submission
-    console.log({
-      member: selectedMember,
-      ratings,
-      comment,
-      anonymous: isAnonymous
-    })
     setShowReviewForm(false)
     setSelectedMember(null)
     setRatings({})

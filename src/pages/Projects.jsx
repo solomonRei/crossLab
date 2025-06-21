@@ -72,9 +72,9 @@ export function Projects() {
             Find your next collaborative challenge and build something amazing
           </p>
         </div>
-        <Button asChild>
-          <Link to="/projects/create">Post a Challenge</Link>
-        </Button>
+        <Link to="/projects/create">
+          <Button>Post a Challenge</Button>
+        </Link>
       </div>
 
       {/* Filters */}
@@ -258,15 +258,14 @@ export function Projects() {
                 </div>
 
                 {/* Action Button */}
-                <Button 
-                  className="w-full" 
-                  variant={project.status === 'recruiting' ? 'default' : 'outline'}
-                  asChild
-                >
-                  <Link to={`/projects/${project.id}`}>
+                <Link to={`/projects/${project.id}`}>
+                  <Button 
+                    className="w-full" 
+                    variant={project.status === 'recruiting' ? 'default' : 'outline'}
+                  >
                     {project.status === 'recruiting' ? 'Join Team' : 'View Details'}
-                  </Link>
-                </Button>
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           </motion.div>
