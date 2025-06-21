@@ -2,6 +2,7 @@ import { createContext, useContext, useReducer, useEffect, useCallback } from 'r
 import toast from 'react-hot-toast'
 import { authApiService, AuthApiError } from '../services/authApi'
 import { logAction, logError, devLog } from '../config/devTools'
+import { isTokenExpired, getUserFromToken, getTimeUntilExpiration } from '../lib/tokenUtils'
 
 // Auth states
 const AUTH_ACTIONS = {
@@ -15,17 +16,51 @@ const AUTH_ACTIONS = {
   LOAD_USER_SUCCESS: 'LOAD_USER_SUCCESS',
   LOAD_USER_FAILURE: 'LOAD_USER_FAILURE',
   LOGOUT: 'LOGOUT',
-  CLEAR_ERRORS: 'CLEAR_ERRORS'
+  CLEAR_ERRORS: 'CLEAR_ERRORS',
+  INIT_FROM_TOKEN: 'INIT_FROM_TOKEN'
 }
 
-const initialState = {
-  user: null,
-  token: authApiService.getToken(),
-  isAuthenticated: false,
-  isLoading: false,
-  error: null,
-  errors: []
+// Check if user should be authenticated based on stored token
+const getInitialAuthState = () => {
+  const token = authApiService.getToken()
+  
+  if (token && !isTokenExpired(token)) {
+    const userFromToken = getUserFromToken(token)
+    const timeLeft = getTimeUntilExpiration(token)
+    
+    devLog('Found valid stored token:', {
+      hasUser: !!userFromToken,
+      timeLeft,
+      userId: userFromToken?.id
+    })
+    
+    return {
+      user: userFromToken, // Pre-populate with token data
+      token: token,
+      isAuthenticated: true,
+      isLoading: true, // Will still verify with API
+      error: null,
+      errors: []
+    }
+  }
+  
+  if (token && isTokenExpired(token)) {
+    devLog('Found expired token, clearing it')
+    authApiService.setToken(null) // Clear expired token
+  }
+  
+  // No token found or token expired
+  return {
+    user: null,
+    token: null,
+    isAuthenticated: false,
+    isLoading: false,
+    error: null,
+    errors: []
+  }
 }
+
+const initialState = getInitialAuthState()
 
 function authReducer(state, action) {
   // Log actions to Reactotron
@@ -43,7 +78,11 @@ function authReducer(state, action) {
       }
 
     case AUTH_ACTIONS.LOGIN_SUCCESS:
-      devLog('User logged in:', action.payload.user)
+      devLog('User logged in successfully:', {
+        hasToken: !!action.payload.token,
+        hasUser: !!action.payload.user,
+        userEmail: action.payload.user?.email
+      })
       return {
         ...state,
         isLoading: false,
@@ -64,7 +103,10 @@ function authReducer(state, action) {
       }
 
     case AUTH_ACTIONS.LOAD_USER_SUCCESS:
-      devLog('User data loaded:', action.payload.user)
+      devLog('User data loaded successfully:', {
+        userEmail: action.payload.user?.email,
+        userId: action.payload.user?.id
+      })
       return {
         ...state,
         isLoading: false,
@@ -95,16 +137,22 @@ function authReducer(state, action) {
         user: null,
         token: null,
         isAuthenticated: false,
+        isLoading: false,
         error: null,
         errors: []
       }
 
     case AUTH_ACTIONS.CLEAR_ERRORS:
-      return {
-        ...state,
-        error: null,
-        errors: []
+      // Only clear errors if there are actually errors to clear
+      if (state.error || state.errors.length > 0) {
+        devLog('Clearing auth errors')
+        return {
+          ...state,
+          error: null,
+          errors: []
+        }
       }
+      return state
 
     default:
       return state
@@ -117,9 +165,19 @@ const AuthContext = createContext()
 export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, initialState)
 
-  // Load user on app start if token exists
+  // Load user data from API to verify token
   const loadUser = useCallback(async () => {
-    if (!authApiService.getToken()) {
+    const token = authApiService.getToken()
+    
+    if (!token) {
+      devLog('No token found, skipping user load')
+      return
+    }
+
+    if (isTokenExpired(token)) {
+      devLog('Token is expired, logging out')
+      authApiService.setToken(null)
+      dispatch({ type: AUTH_ACTIONS.LOGOUT })
       return
     }
 
@@ -139,8 +197,12 @@ export function AuthProvider({ children }) {
     } catch (error) {
       console.error('Load user error:', error)
       
-      // Clear invalid token
-      authApiService.setToken(null)
+      // If token is invalid, clear it
+      if (error.status === 401 || error.status === 403) {
+        devLog('Token appears to be invalid, clearing auth state')
+        authApiService.setToken(null)
+        toast.error('Your session has expired. Please sign in again.')
+      }
       
       dispatch({
         type: AUTH_ACTIONS.LOAD_USER_FAILURE,
@@ -152,9 +214,38 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  // Load user on app start if token exists
   useEffect(() => {
-    loadUser()
+    const token = authApiService.getToken()
+    
+    if (token && !isTokenExpired(token)) {
+      devLog('App started with valid stored token, verifying with API')
+      loadUser()
+    } else if (token && isTokenExpired(token)) {
+      devLog('App started with expired token, clearing auth state')
+      authApiService.setToken(null)
+      dispatch({ type: AUTH_ACTIONS.LOGOUT })
+    }
   }, [loadUser])
+
+  // Set up token expiration check
+  useEffect(() => {
+    if (!state.isAuthenticated || !state.token) return
+
+    const checkTokenExpiration = () => {
+      if (isTokenExpired(state.token)) {
+        devLog('Token expired during session, logging out')
+        authApiService.setToken(null)
+        dispatch({ type: AUTH_ACTIONS.LOGOUT })
+        toast.error('Your session has expired. Please sign in again.')
+      }
+    }
+
+    // Check every minute
+    const interval = setInterval(checkTokenExpiration, 60000)
+    
+    return () => clearInterval(interval)
+  }, [state.isAuthenticated, state.token])
 
   // Login function
   const login = async (email, password) => {
@@ -163,7 +254,15 @@ export function AuthProvider({ children }) {
     try {
       const response = await authApiService.login({ email, password })
       
-      if (response.success && response.data) {
+      devLog('Login API response:', {
+        success: response.success,
+        hasData: !!response.data,
+        hasToken: !!response.data?.token,
+        hasUser: !!response.data?.user,
+        userEmail: response.data?.user?.email
+      })
+      
+      if (response.success && response.data && response.data.token && response.data.user) {
         dispatch({
           type: AUTH_ACTIONS.LOGIN_SUCCESS,
           payload: {
@@ -175,7 +274,7 @@ export function AuthProvider({ children }) {
         toast.success(`Welcome back, ${response.data.user?.firstName || 'User'}!`)
         return { success: true, data: response.data }
       } else {
-        throw new Error(response.message || 'Login failed')
+        throw new Error('Invalid response: missing token or user data')
       }
     } catch (error) {
       console.error('Login error:', error)
@@ -204,6 +303,7 @@ export function AuthProvider({ children }) {
       
       if (response.success) {
         dispatch({ type: AUTH_ACTIONS.REGISTER_SUCCESS })
+        toast.success('Registration successful! Please sign in.')
         return { success: true, data: response.data }
       } else {
         throw new Error(response.message || 'Registration failed')
@@ -233,10 +333,23 @@ export function AuthProvider({ children }) {
     toast.success('Logged out successfully')
   }
 
-  // Clear errors
-  const clearErrors = () => {
-    dispatch({ type: AUTH_ACTIONS.CLEAR_ERRORS })
-  }
+  // Clear errors function with guard
+  const clearErrors = useCallback(() => {
+    if (state.error || state.errors.length > 0) {
+      dispatch({ type: AUTH_ACTIONS.CLEAR_ERRORS })
+    }
+  }, [state.error, state.errors])
+
+  // Check if token needs refresh
+  const checkTokenHealth = useCallback(() => {
+    const token = authApiService.getToken()
+    if (!token) return { isValid: false, timeLeft: null }
+    
+    const isValid = !isTokenExpired(token)
+    const timeLeft = getTimeUntilExpiration(token)
+    
+    return { isValid, timeLeft }
+  }, [])
 
   const value = {
     ...state,
@@ -244,7 +357,8 @@ export function AuthProvider({ children }) {
     register,
     logout,
     clearErrors,
-    loadUser
+    loadUser,
+    checkTokenHealth
   }
 
   return (

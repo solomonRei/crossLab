@@ -22,6 +22,7 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 // Development Tools
 import { ApiSwitcher } from './components/ApiSwitcher'
 import { DevToolsPanel } from './components/DevToolsPanel'
+import { TokenStatus } from './components/TokenStatus'
 
 function App() {
   return (
@@ -130,6 +131,7 @@ function App() {
           {/* Development Tools - shown on all pages in development */}
           <ApiSwitcher />
           <DevToolsPanel />
+          <TokenStatus />
         </div>
       </Router>
     </AuthProvider>

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from '../components/ui/Card'
 import { Input, Label } from '../components/ui/Input'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs'
 import { useAuth } from '../contexts/AuthContext'
+import { devLog } from '../config/devTools'
 import { 
   Mail, 
   Lock, 
@@ -118,7 +119,9 @@ export function Auth() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      const from = location.state?.from?.pathname || '/dashboard'
+      // Default to /projects instead of /dashboard since that's our main protected route
+      const from = location.state?.from?.pathname || '/projects'
+      devLog('Auth: User already authenticated, redirecting to:', from)
       navigate(from, { replace: true })
     }
   }, [isAuthenticated, navigate, location])
@@ -127,7 +130,7 @@ export function Auth() {
   useEffect(() => {
     clearErrors()
     setValidationErrors({})
-  }, [activeTab])
+  }, [activeTab, clearErrors])
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -172,10 +175,20 @@ export function Auth() {
     }
     
     if (activeTab === 'login') {
+      devLog('Auth: Attempting login for:', formData.email)
       const result = await login(formData.email, formData.password)
+      
+      devLog('Auth: Login result:', { success: result.success, hasData: !!result.data })
+      
       if (result.success) {
-        const from = location.state?.from?.pathname || '/dashboard'
-        navigate(from, { replace: true })
+        // Get the redirect path, default to /projects
+        const from = location.state?.from?.pathname || '/projects'
+        devLog('Auth: Login successful, redirecting to:', from)
+        
+        // Small delay to ensure state is updated
+        setTimeout(() => {
+          navigate(from, { replace: true })
+        }, 100)
       }
     } else {
       const registerData = {
@@ -383,20 +396,6 @@ export function Auth() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="role">Role</Label>
-                    <select
-                      id="role"
-                      className="w-full p-2 border rounded-md bg-background"
-                      value={formData.role}
-                      onChange={(e) => handleInputChange('role', e.target.value)}
-                    >
-                      <option value="User">Student</option>
-                      <option value="Creator">Creator</option>
-                      <option value="Admin">Admin</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -435,26 +434,30 @@ export function Auth() {
                     {validationErrors.confirmPassword && <p className="text-sm text-red-500">{validationErrors.confirmPassword}</p>}
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     <label className="flex items-start space-x-2 text-sm">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         className="rounded border-border mt-0.5"
                         checked={formData.acceptTerms}
                         onChange={(e) => handleInputChange('acceptTerms', e.target.checked)}
                       />
                       <span>
                         I agree to the{' '}
-                        <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link>
-                        {' '}and{' '}
-                        <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+                        <Link to="/terms" className="text-primary hover:underline">
+                          Terms of Service
+                        </Link>{' '}
+                        and{' '}
+                        <Link to="/privacy" className="text-primary hover:underline">
+                          Privacy Policy
+                        </Link>
                       </span>
                     </label>
                     {validationErrors.acceptTerms && <p className="text-sm text-red-500">{validationErrors.acceptTerms}</p>}
                   </div>
 
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? 'Creating account...' : 'Create Account'}
+                    {isLoading ? 'Creating account...' : 'Sign Up'}
                   </Button>
                 </form>
               </TabsContent>
@@ -466,99 +469,101 @@ export function Auth() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or continue with
+                </span>
               </div>
             </div>
 
             {/* OAuth Buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                variant="outline"
+                onClick={() => handleOAuthLogin('google')}
+                className="w-full"
+              >
+                <GoogleIcon className="h-4 w-4 mr-2" />
+                Google
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleOAuthLogin('outlook')}
+                className="w-full"
+              >
+                <OutlookIcon className="h-4 w-4 mr-2" />
+                Outlook
+              </Button>
+            </div>
+
+            {/* University Authentication */}
             <div className="space-y-3">
               <Button
                 variant="outline"
-                className="w-full"
-                onClick={() => handleOAuthLogin('google')}
-                disabled={isLoading}
+                onClick={() => setShowUniversityOptions(!showUniversityOptions)}
+                className="w-full flex items-center justify-between"
               >
-                <GoogleIcon className="h-4 w-4 mr-2" />
-                Continue with Google
+                <div className="flex items-center">
+                  <GraduationCap className="h-4 w-4 mr-2" />
+                  University Login
+                </div>
+                {showUniversityOptions ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
               </Button>
 
-              {/* University Login Section */}
-              <div className="space-y-2">
-                <Button
-                  variant="outline"
-                  className="w-full justify-between"
-                  onClick={() => setShowUniversityOptions(!showUniversityOptions)}
-                  disabled={isLoading}
-                >
-                  <div className="flex items-center">
-                    <GraduationCap className="h-4 w-4 mr-2" />
-                    Continue with University Login
-                  </div>
-                  {showUniversityOptions ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </Button>
+              <AnimatePresence>
+                {showUniversityOptions && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-2 overflow-hidden"
+                  >
+                    {universityProviders.map((university) => (
+                      <Button
+                        key={university.id}
+                        variant="outline"
+                        onClick={() => handleUniversityLogin(university)}
+                        className={`w-full justify-start ${university.color} text-white border-0 hover:opacity-90`}
+                      >
+                        {university.id === 'usm' && <USMIcon className="h-4 w-4 mr-2" />}
+                        {university.id === 'utm' && <UTMIcon className="h-4 w-4 mr-2" />}
+                        <div className="text-left">
+                          <div className="font-medium">{university.name}</div>
+                          <div className="text-xs opacity-90">{university.fullName}</div>
+                        </div>
+                      </Button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
-                <AnimatePresence>
-                  {showUniversityOptions && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="grid grid-cols-1 gap-2 p-2">
-                        {universityProviders.map((provider) => (
-                          <Button
-                            key={provider.id}
-                            variant="outline"
-                            className="h-auto p-3 justify-start text-left border border-border hover:border-primary/50 hover:bg-accent transition-all"
-                            onClick={() => handleUniversityLogin(provider)}
-                            disabled={isLoading}
-                          >
-                            <div className="flex items-center space-x-2 w-full">
-                              <div className={`w-8 h-8 rounded ${provider.color} flex items-center justify-center text-white text-xs font-bold`}>
-                                {provider.name}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="font-medium text-sm truncate">{provider.name}</div>
-                                <div className="text-xs text-muted-foreground truncate">{provider.fullName}</div>
-                              </div>
-                            </div>
-                          </Button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+            {/* Additional Services */}
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                variant="outline"
+                onClick={() => handleOAuthLogin('moodle')}
+                className="w-full"
+              >
+                <MoodleIcon className="h-4 w-4 mr-2" />
+                Moodle
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleOAuthLogin('teams')}
+                className="w-full"
+              >
+                <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20.625 5.055c-.01-.09-.04-.18-.08-.25-.12-.21-.32-.36-.55-.41L12 2.125c-.28-.06-.57.08-.69.35L9.5 6.625H6.875c-.48 0-.875.395-.875.875v9.375c0 .48.395.875.875.875h13.25c.48 0 .875-.395.875-.875v-11.82z" />
+                </svg>
+                Teams
+              </Button>
             </div>
           </CardContent>
         </Card>
-
-        {/* Footer */}
-        <div className="text-center mt-6 text-sm text-muted-foreground">
-          {activeTab === 'login' ? (
-            <p>
-              Don't have an account?{' '}
-              <button
-                onClick={() => setActiveTab('signup')}
-                className="text-primary hover:underline font-medium"
-              >
-                Sign up
-              </button>
-            </p>
-          ) : (
-            <p>
-              Already have an account?{' '}
-              <button
-                onClick={() => setActiveTab('login')}
-                className="text-primary hover:underline font-medium"
-              >
-                Sign in
-              </button>
-            </p>
-          )}
-        </div>
       </motion.div>
     </div>
   )
