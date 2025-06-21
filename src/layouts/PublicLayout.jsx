@@ -1,8 +1,25 @@
 import { Link, Outlet } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
-import { Github, Twitter, Linkedin } from 'lucide-react'
+import { Avatar, AvatarImage, AvatarFallback } from '../components/ui/Avatar'
+import { Badge } from '../components/ui/Badge'
+import { useAuth } from '../contexts/AuthContext'
+import { getAvatarFallback } from '../lib/utils'
+import { Github, Twitter, Linkedin, User, LogOut, Settings } from 'lucide-react'
+import { useState } from 'react'
 
 export function PublicLayout() {
+  const { isAuthenticated, user, logout } = useAuth()
+  const [showUserMenu, setShowUserMenu] = useState(false)
+
+  const displayName = user?.firstName && user?.lastName 
+    ? `${user.firstName} ${user.lastName}` 
+    : user?.firstName || user?.email || 'User'
+
+  const handleLogout = () => {
+    logout()
+    setShowUserMenu(false)
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
@@ -22,15 +39,78 @@ export function PublicLayout() {
           </nav>
 
           <div className="flex items-center space-x-4">
-            <Link to="/auth">
-              <Button variant="ghost">Sign In</Button>
-            </Link>
-            <Link to="/auth">
-              <Button>Get Started</Button>
-            </Link>
+            {isAuthenticated && user ? (
+              <div className="relative">
+                {/* User Profile Menu */}
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center space-x-3 p-2 rounded-lg hover:bg-accent transition-colors"
+                >
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user.avatar} alt={displayName} />
+                    <AvatarFallback className="text-xs">
+                      {getAvatarFallback(displayName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="hidden sm:block text-left">
+                    <p className="text-sm font-medium">{displayName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {user.roles?.[0] || user.role || 'User'}
+                    </p>
+                  </div>
+                </button>
+
+                {/* Dropdown Menu */}
+                {showUserMenu && (
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-card border rounded-lg shadow-lg py-2 z-50">
+                    <Link
+                      to="/profile"
+                      className="flex items-center space-x-2 px-4 py-2 text-sm hover:bg-accent transition-colors"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      <User className="h-4 w-4" />
+                      <span>Profile</span>
+                    </Link>
+                    <Link
+                      to="/projects"
+                      className="flex items-center space-x-2 px-4 py-2 text-sm hover:bg-accent transition-colors"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>Dashboard</span>
+                    </Link>
+                    <hr className="my-2" />
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center space-x-2 px-4 py-2 text-sm hover:bg-accent transition-colors w-full text-left text-red-600 hover:text-red-700"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link to="/auth">
+                  <Button variant="ghost">Sign In</Button>
+                </Link>
+                <Link to="/auth">
+                  <Button>Get Started</Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
+
+      {/* Click outside to close menu */}
+      {showUserMenu && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setShowUserMenu(false)}
+        />
+      )}
 
       {/* Main Content */}
       <main className="flex-1">
@@ -74,21 +154,21 @@ export function PublicLayout() {
             <div>
               <h3 className="font-semibold mb-3">Connect</h3>
               <div className="flex space-x-4">
-                <Button variant="ghost" size="icon">
-                  <Github className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Twitter className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Linkedin className="h-4 w-4" />
-                </Button>
+                <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Github className="h-5 w-5" />
+                </a>
+                <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Twitter className="h-5 w-5" />
+                </a>
+                <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <Linkedin className="h-5 w-5" />
+                </a>
               </div>
             </div>
           </div>
 
           <div className="border-t mt-8 pt-8 text-center text-sm text-muted-foreground">
-            <p>&copy; 2024 CrossLab. All rights reserved. Built with ❤️ for collaborative learning.</p>
+            <p>&copy; 2024 CrossLab. All rights reserved.</p>
           </div>
         </div>
       </footer>
