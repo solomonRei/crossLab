@@ -1,15 +1,20 @@
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Link } from 'react-router-dom'
-import { Button } from '../components/ui/Button'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
-import { Badge } from '../components/ui/Badge'
-import { Progress } from '../components/ui/Progress'
-import { 
-  Search, 
-  Filter, 
-  Calendar, 
-  Users, 
+import { useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
+import { Button } from "../components/ui/Button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/Card";
+import { Badge } from "../components/ui/Badge";
+import { Progress } from "../components/ui/Progress";
+import {
+  Search,
+  Filter,
+  Calendar,
+  Users,
   Clock,
   MapPin,
   Star,
@@ -17,50 +22,117 @@ import {
   Code,
   Palette,
   Scale,
-  Megaphone
-} from 'lucide-react'
-import { projects, roleTypes } from '../data/mockData'
-import { formatDate, formatProgress } from '../lib/utils'
+  Megaphone,
+} from "lucide-react";
+import { authApiService } from "../services/authApi";
+import { roleTypes } from "../data/mockData";
+import { formatDate, formatProgress } from "../lib/utils";
 
 const difficultyColors = {
-  Easy: 'bg-green-500',
-  Medium: 'bg-yellow-500', 
-  Hard: 'bg-red-500'
-}
+  Easy: "bg-green-500",
+  Medium: "bg-yellow-500",
+  Hard: "bg-red-500",
+};
 
 const statusColors = {
-  recruiting: 'bg-blue-500',
-  'in-progress': 'bg-orange-500',
-  completed: 'bg-green-500'
-}
+  recruiting: "bg-blue-500",
+  "in-progress": "bg-orange-500",
+  completed: "bg-green-500",
+};
+
+const getStatusString = (status) => {
+  if (typeof status === "number") {
+    switch (status) {
+      case 0:
+        return "recruiting";
+      case 1:
+        return "in-progress";
+      case 2:
+        return "completed";
+      case 3:
+        return "cancelled";
+      case 4:
+        return "draft";
+      default:
+        return "unknown";
+    }
+  }
+  return status?.toLowerCase() || "unknown";
+};
+
+const getDifficultyString = (difficulty) => {
+  if (typeof difficulty === "number") {
+    switch (difficulty) {
+      case 0:
+        return "easy";
+      case 1:
+        return "medium";
+      case 2:
+        return "hard";
+      default:
+        return "unknown";
+    }
+  }
+  return difficulty?.toLowerCase() || "unknown";
+};
 
 export function Projects() {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedRole, setSelectedRole] = useState('all')
-  const [selectedDifficulty, setSelectedDifficulty] = useState('all')
-  const [selectedStatus, setSelectedStatus] = useState('all')
+  const [projects, setProjects] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const filteredProjects = projects.filter(project => {
-    return (
-      project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.description.toLowerCase().includes(searchTerm.toLowerCase())
-    ) &&
-    (selectedRole === 'all' || project.rolesNeeded.includes(selectedRole)) &&
-    (selectedDifficulty === 'all' || project.difficulty === selectedDifficulty) &&
-    (selectedStatus === 'all' || project.status === selectedStatus)
-  })
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedRole, setSelectedRole] = useState("all");
+  const [selectedDifficulty, setSelectedDifficulty] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+
+  const fetchProjects = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const params = {
+        SearchTerm: searchTerm,
+        Status:
+          selectedStatus === "all" ? "" : selectedStatus.replace("-", "_"),
+        Difficulty: selectedDifficulty === "all" ? "" : selectedDifficulty,
+        Role: selectedRole === "all" ? "" : selectedRole,
+        Page: 1,
+        PageSize: 20,
+      };
+      // Remove empty params
+      Object.keys(params).forEach((key) => {
+        if (params[key] === "" || params[key] === null) {
+          delete params[key];
+        }
+      });
+
+      const response = await authApiService.getProjects(params);
+      if (response.success) {
+        setProjects(response.data);
+      } else {
+        throw new Error(response.message || "Failed to fetch projects");
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error("Error fetching projects:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchTerm, selectedRole, selectedDifficulty, selectedStatus]);
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
 
   const getRoleIcon = (roleId) => {
-    const role = roleTypes.find(r => r.id === roleId)
-    const iconMap = {
-      Code: Code,
-      Palette: Palette,
-      TrendingUp: TrendingUp,
-      Scale: Scale,
-      Megaphone: Megaphone
-    }
-    return iconMap[role?.icon] || Users
-  }
+    const roleIcons = {
+      1: Code,
+      2: Palette,
+      3: TrendingUp,
+      4: Scale,
+      5: Megaphone,
+    };
+    return roleIcons[roleId] || Users;
+  };
 
   return (
     <div className="space-y-6">
@@ -101,36 +173,42 @@ export function Projects() {
           {/* Filter Controls */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Role Needed</label>
-              <select 
+              <label className="block text-sm font-medium mb-2">
+                Role Needed
+              </label>
+              <select
                 className="w-full p-2 border rounded-md bg-background"
                 value={selectedRole}
                 onChange={(e) => setSelectedRole(e.target.value)}
               >
                 <option value="all">All Roles</option>
-                {roleTypes.map(role => (
-                  <option key={role.id} value={role.id}>{role.name}</option>
+                {roleTypes.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.name}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Difficulty</label>
-              <select 
+              <label className="block text-sm font-medium mb-2">
+                Difficulty
+              </label>
+              <select
                 className="w-full p-2 border rounded-md bg-background"
                 value={selectedDifficulty}
                 onChange={(e) => setSelectedDifficulty(e.target.value)}
               >
                 <option value="all">All Levels</option>
-                <option value="Easy">Easy</option>
-                <option value="Medium">Medium</option>
-                <option value="Hard">Hard</option>
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
               </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">Status</label>
-              <select 
+              <select
                 className="w-full p-2 border rounded-md bg-background"
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
@@ -148,7 +226,7 @@ export function Projects() {
       {/* Results */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">
-          {filteredProjects.length} Projects Found
+          {isLoading ? "Loading..." : `${projects.length} Projects Found`}
         </h2>
         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
           <Star className="h-4 w-4" />
@@ -157,136 +235,160 @@ export function Projects() {
       </div>
 
       {/* Project Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {filteredProjects.map((project, index) => (
-          <motion.div
-            key={project.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: index * 0.1 }}
-          >
-            <Card className="card-hover h-full">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-xl mb-2">{project.title}</CardTitle>
-                    <p className="text-muted-foreground text-sm mb-3">{project.description}</p>
-                    <div className="flex items-center text-sm text-muted-foreground mb-3">
-                      <MapPin className="h-4 w-4 mr-1" />
-                      {project.company}
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end space-y-2">
-                    <Badge 
-                      variant="secondary"
-                      className={`${statusColors[project.status]} text-white`}
-                    >
-                      {project.status.replace('-', ' ')}
-                    </Badge>
-                    <Badge 
-                      variant="outline"
-                      className={`${difficultyColors[project.difficulty]} text-white border-0`}
-                    >
-                      {project.difficulty}
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {project.tags.map(tag => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-
-                {/* Roles Needed */}
-                <div className="flex items-center space-x-2 mb-3">
-                  <span className="text-sm font-medium">Roles needed:</span>
-                  <div className="flex space-x-1">
-                    {project.rolesNeeded.map(roleId => {
-                      const role = roleTypes.find(r => r.id === roleId)
-                      const IconComponent = getRoleIcon(roleId)
-                      return (
-                        <div key={roleId} className={`w-8 h-8 rounded-full ${role?.color} flex items-center justify-center`}>
-                          <IconComponent className="h-4 w-4 text-white" />
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent>
-                {/* Progress for in-progress projects */}
-                {project.status === 'in-progress' && (
-                  <div className="mb-4">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Progress</span>
-                      <span>{formatProgress(project.progress)}%</span>
-                    </div>
-                    <Progress value={formatProgress(project.progress)} />
-                  </div>
-                )}
-
-                {/* Project Stats */}
-                <div className="grid grid-cols-3 gap-4 text-center mb-6">
-                  <div>
-                    <div className="flex items-center justify-center text-muted-foreground mb-1">
-                      <Users className="h-4 w-4 mr-1" />
-                    </div>
-                    <div className="text-sm font-medium">
-                      {project.participants}/{project.maxParticipants}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Team Size</div>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-center text-muted-foreground mb-1">
-                      <Clock className="h-4 w-4 mr-1" />
-                    </div>
-                    <div className="text-sm font-medium">{project.duration}</div>
-                    <div className="text-xs text-muted-foreground">Duration</div>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-center text-muted-foreground mb-1">
-                      <Calendar className="h-4 w-4 mr-1" />
-                    </div>
-                    <div className="text-sm font-medium">{formatDate(project.deadline)}</div>
-                    <div className="text-xs text-muted-foreground">Deadline</div>
-                  </div>
-                </div>
-
-                {/* Action Button */}
-                <Link to={`/projects/${project.id}`}>
-                  <Button 
-                    className="w-full" 
-                    variant={project.status === 'recruiting' ? 'default' : 'outline'}
-                  >
-                    {project.status === 'recruiting' ? 'Join Team' : 'View Details'}
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-
-      {filteredProjects.length === 0 && (
-        <div className="text-center py-12">
-          <div className="text-muted-foreground mb-4">
-            No projects match your current filters
-          </div>
-          <Button onClick={() => {
-            setSearchTerm('')
-            setSelectedRole('all')
-            setSelectedDifficulty('all')
-            setSelectedStatus('all')
-          }}>
-            Clear Filters
+      {isLoading ? (
+        <div className="text-center p-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Fetching projects...</p>
+        </div>
+      ) : error ? (
+        <div className="text-center p-8 bg-red-50 dark:bg-red-950 rounded-lg">
+          <h3 className="text-lg font-semibold text-red-700 dark:text-red-200">
+            Failed to load projects
+          </h3>
+          <p className="text-red-600 dark:text-red-300 mt-2">{error}</p>
+          <Button onClick={fetchProjects} className="mt-4">
+            Try Again
           </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {projects.map((project, index) => {
+            const statusString = getStatusString(project.status);
+            const difficultyString = getDifficultyString(project.difficulty);
+
+            return (
+              <motion.div
+                key={project.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: index * 0.1 }}
+              >
+                <Card className="card-hover h-full">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-xl mb-2">
+                          {project.title}
+                        </CardTitle>
+                        <p className="text-muted-foreground text-sm mb-3">
+                          {project.description}
+                        </p>
+                        <div className="flex items-center text-sm text-muted-foreground mb-3">
+                          <MapPin className="h-4 w-4 mr-1" />
+                          {project.location || "Remote"}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end space-y-2">
+                        <Badge
+                          variant={
+                            difficultyString === "easy"
+                              ? "easy"
+                              : difficultyString === "medium"
+                              ? "medium"
+                              : "destructive"
+                          }
+                        >
+                          {difficultyString}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Tags */}
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {(project.tags || []).map((tag) => (
+                        <Badge
+                          key={tag}
+                          variant="secondary"
+                          className="text-xs"
+                        >
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+
+                    {/* Roles Needed */}
+                    <div className="flex items-center space-x-2 mb-3">
+                      <span className="text-sm font-medium">Roles needed:</span>
+                      <div className="flex space-x-1">
+                        {(project.rolesNeeded || []).map((role) => {
+                          const roleInfo = roleTypes.find(
+                            (r) => r.name === role
+                          );
+                          const IconComponent = getRoleIcon(roleInfo?.id);
+                          return (
+                            <div
+                              key={role}
+                              className={`w-8 h-8 rounded-full ${roleInfo?.color} flex items-center justify-center`}
+                            >
+                              <IconComponent className="h-4 w-4 text-white" />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent>
+                    {/* Progress for in-progress projects */}
+                    {statusString === "in-progress" && (
+                      <div className="mb-4">
+                        <div className="flex justify-between text-sm mb-1">
+                          <span>Progress</span>
+                          <span>{formatProgress(project.progress)}%</span>
+                        </div>
+                        <Progress value={formatProgress(project.progress)} />
+                      </div>
+                    )}
+
+                    {/* Project Stats */}
+                    <div className="grid grid-cols-3 gap-4 text-center mb-6">
+                      <div>
+                        <div className="flex items-center justify-center text-muted-foreground mb-1">
+                          <Users className="h-4 w-4 mr-1" />
+                        </div>
+                        <div className="text-sm font-medium">
+                          {project.team?.members.length || 0}/
+                          {project.maxTeamSize}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Team Size
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-center text-muted-foreground mb-1">
+                          <Clock className="h-4 w-4 mr-1" />
+                        </div>
+                        <div className="text-sm font-medium">
+                          {project.estimatedDuration}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Duration
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-center text-muted-foreground mb-1">
+                          <Calendar className="h-4 w-4 mr-1" />
+                        </div>
+                        <div className="text-sm font-medium">
+                          {formatDate(project.createdAt)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Created
+                        </div>
+                      </div>
+                    </div>
+                    <Link to={`/projects/${project.id}`} className="w-full">
+                      <Button variant="outline" className="w-full">
+                        View Details
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })}
         </div>
       )}
     </div>
-  )
-} 
+  );
+}
