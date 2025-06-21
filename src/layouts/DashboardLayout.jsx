@@ -21,15 +21,16 @@ import { Badge } from '../components/ui/Badge'
 import { NotificationCenter } from '../components/NotificationCenter'
 import { useNotifications } from '../hooks/useNotifications'
 import { useAuth } from '../contexts/AuthContext'
+import { useProfileStore } from '../store/userStore'
 import { getAvatarFallback } from '../lib/utils'
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Projects', href: '/projects', icon: FolderOpen },
-  { name: 'Showcase', href: '/showcase', icon: Trophy },
-  { name: 'Reviews', href: '/reviews', icon: FileCheck },
-  { name: 'Profile', href: '/profile', icon: User },
-]
+  { name: "Dashboard", href: "/dashboard", icon: Home },
+  { name: "Projects", href: "/projects", icon: FolderOpen },
+  { name: "Showcase", href: "/showcase", icon: Trophy },
+  { name: "Reviews", href: "/reviews", icon: FileCheck },
+  { name: "Profile", href: "/profile", icon: User },
+];
 
 export function DashboardLayout() {
   const location = useLocation()
@@ -39,14 +40,17 @@ export function DashboardLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [notificationCenterOpen, setNotificationCenterOpen] = useState(false)
   
+  // Get profile data from store (for CV functionality)
+  const profileData = useProfileStore((state) => state.profileData)
+  
   // Initialize notifications with user ID
   const { getCounts } = useNotifications(user?.id || 'anonymous')
   const { unread: unreadCount } = getCounts()
 
   const toggleDarkMode = () => {
-    setDarkMode(!darkMode)
-    document.documentElement.classList.toggle('dark')
-  }
+    setDarkMode(!darkMode);
+    document.documentElement.classList.toggle("dark");
+  };
 
   const handleNotificationClick = () => {
     setNotificationCenterOpen(!notificationCenterOpen)
@@ -57,24 +61,26 @@ export function DashboardLayout() {
     navigate('/')
   }
 
-  // Default user data if not available from API
-  const currentUser = user || {
-    id: 'default',
-    firstName: 'User',
-    lastName: '',
-    email: 'user@example.com',
-    role: 'User',
-    avatar: null
+  // Use profile data if available, otherwise fallback to auth user data
+  const currentUser = {
+    ...user,
+    name: profileData.name || (user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.firstName || user?.email || 'User'),
+    role: profileData.role || user?.role || 'User',
+    avatar: profileData.avatar || user?.avatar,
+    level: profileData.level,
+    xp: profileData.xp
   }
 
-  const displayName = currentUser.firstName && currentUser.lastName 
-    ? `${currentUser.firstName} ${currentUser.lastName}`
-    : currentUser.firstName || currentUser.email || 'User'
+  const displayName = currentUser.name || 'User'
 
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
-      <div className={`${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-50 w-64 bg-card border-r transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
+      <div
+        className={`${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        } fixed inset-y-0 left-0 z-50 w-64 bg-card border-r transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}
+      >
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-6 border-b">
@@ -84,8 +90,8 @@ export function DashboardLayout() {
               </div>
               <span className="text-xl font-bold">CrossLab</span>
             </div>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="icon"
               className="lg:hidden"
               onClick={() => setMobileMenuOpen(false)}
@@ -97,21 +103,21 @@ export function DashboardLayout() {
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2">
             {navigation.map((item) => {
-              const isActive = location.pathname === item.href
+              const isActive = location.pathname === item.href;
               return (
                 <Link
                   key={item.name}
                   to={item.href}
                   className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
                   }`}
                 >
                   <item.icon className="h-5 w-5" />
                   <span>{item.name}</span>
                 </Link>
-              )
+              );
             })}
           </nav>
 
@@ -124,9 +130,21 @@ export function DashboardLayout() {
               </Avatar>
               <div className="flex-1">
                 <p className="text-sm font-medium">{displayName}</p>
-                <p className="text-xs text-muted-foreground">{currentUser.role || 'User'}</p>
+                <p className="text-xs text-muted-foreground">{currentUser.role}</p>
               </div>
             </div>
+            
+            {/* Level and XP (if available from CV) */}
+            {currentUser.level && (
+              <div className="mt-3 flex items-center justify-between">
+                <Badge variant="secondary" className="text-xs">
+                  Level {currentUser.level}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {currentUser.xp} XP
+                </span>
+              </div>
+            )}
             
             {/* Logout Button */}
             <div className="mt-3">
@@ -148,18 +166,22 @@ export function DashboardLayout() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
         <header className="h-16 bg-card border-b flex items-center justify-between px-6">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="icon"
             className="lg:hidden"
             onClick={() => setMobileMenuOpen(true)}
           >
             <Menu className="h-6 w-6" />
           </Button>
-          
+
           <div className="flex items-center space-x-4">
             <Button variant="ghost" size="icon" onClick={toggleDarkMode}>
-              {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              {darkMode ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
             </Button>
             
             <div className="relative">
@@ -205,11 +227,11 @@ export function DashboardLayout() {
 
       {/* Mobile overlay */}
       {mobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
     </div>
-  )
-} 
+  );
+}
