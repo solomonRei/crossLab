@@ -131,75 +131,52 @@ export function Auth() {
   }
 
   const validateForm = () => {
-    const newErrors = {}
-
-    // Email validation
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required'
-    } else if (!validateEmail(formData.email)) {
-      newErrors.email = 'Please enter a valid email'
+    const errors = {}
+    
+    if (!formData.email || !/\S+@\S+\.\S+/.test(formData.email)) {
+      errors.email = 'Please enter a valid email'
     }
-
-    // Password validation
-    if (!formData.password.trim()) {
-      newErrors.password = 'Password is required'
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters'
+    
+    if (!formData.password || formData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters'
     }
-
-    // Additional validation for signup
+    
     if (activeTab === 'signup') {
-      if (!formData.firstName.trim()) {
-        newErrors.firstName = 'First name is required'
+      if (!formData.firstName || formData.firstName.length < 2) {
+        errors.firstName = 'First name must be at least 2 characters'
       }
-      if (!formData.lastName.trim()) {
-        newErrors.lastName = 'Last name is required'
+      if (!formData.lastName || formData.lastName.length < 2) {
+        errors.lastName = 'Last name must be at least 2 characters'
       }
-      if (!formData.confirmPassword) {
-        newErrors.confirmPassword = 'Please confirm your password'
-      } else if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = 'Passwords do not match'
+      if (formData.password !== formData.confirmPassword) {
+        errors.confirmPassword = 'Passwords do not match'
       }
       if (!formData.acceptTerms) {
-        newErrors.acceptTerms = 'You must accept the terms of service'
+        errors.acceptTerms = 'You must accept the terms of service'
       }
     }
-
-    setErrors(newErrors)
-    const isValid = Object.keys(newErrors).length === 0
-    console.log('Form validation result:', { 
-      activeTab, 
-      isValid, 
-      errors: newErrors, 
-      formData: {
-        ...formData,
-        password: formData.password ? '***' : '',
-        confirmPassword: formData.confirmPassword ? '***' : ''
-      }
-    })
-    return isValid
+    
+    setErrors(errors)
+    return Object.keys(errors).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    console.log('Form submitted, validating...', { formData, activeTab })
     
     if (!validateForm()) {
-      console.log('Validation failed:', errors)
       return
     }
-
-    console.log('Validation passed, submitting...')
+    
     setIsLoading(true)
     
-    // Simulate API call
-    setTimeout(() => {
-      console.log(`${activeTab} form submitted successfully:`, formData)
-      setIsLoading(false)
-      // Navigate to dashboard on success
-      console.log('Navigating to dashboard...')
+    try {
+      setErrors({})
       navigate('/dashboard')
-    }, 1500)
+    } catch (error) {
+      setErrors({ submit: 'Authentication failed. Please try again.' })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleInputChange = (field, value) => {
@@ -210,25 +187,11 @@ export function Auth() {
   }
 
   const handleOAuthLogin = (provider) => {
-    console.log(`Initiating ${provider} OAuth login`)
-    setIsLoading(true)
-    
-    // Simulate OAuth redirect
-    setTimeout(() => {
-      setIsLoading(false)
-      navigate('/dashboard')
-    }, 2000)
+    window.location.href = `${window.location.origin}/dashboard`
   }
 
   const handleUniversityLogin = (university) => {
-    console.log(`Initiating ${university.name} SSO login`)
-    setIsLoading(true)
-    
-    // Simulate university SSO redirect
-    setTimeout(() => {
-      setIsLoading(false)
-      navigate('/dashboard')
-    }, 2000)
+    window.location.href = `${window.location.origin}/dashboard`
   }
 
   return (

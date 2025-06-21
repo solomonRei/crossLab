@@ -75,17 +75,17 @@ export function Home() {
               Build amazing projects together. Get hired by top companies.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild className="group">
-                <Link to="/auth">
+              <Link to="/auth">
+                <Button size="lg" className="group">
                   Join a Team
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild>
-                <Link to="/showcase">
+                </Button>
+              </Link>
+              <Link to="/showcase">
+                <Button size="lg" variant="outline">
                   Browse Showcase
-                </Link>
-              </Button>
+                </Button>
+              </Link>
             </div>
           </motion.div>
         </div>
@@ -200,18 +200,18 @@ export function Home() {
                 Your next career opportunity is one project away.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" asChild>
-                  <Link to="/auth">
+                <Link to="/auth">
+                  <Button size="lg">
                     Start Your Journey
                     <Heart className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button size="lg" variant="outline" asChild>
-                  <Link to="/projects">
+                  </Button>
+                </Link>
+                <Link to="/projects">
+                  <Button size="lg" variant="outline">
                     Explore Projects
                     <Globe className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
