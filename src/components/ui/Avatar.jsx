@@ -12,10 +12,11 @@ export function Avatar({ className, ...props }) {
   )
 }
 
-export function AvatarImage({ className, ...props }) {
+export function AvatarImage({ className, alt, ...props }) {
   return (
     <img
       className={cn("aspect-square h-full w-full", className)}
+      alt={alt || "Avatar"}
       {...props}
     />
   )

@@ -14,8 +14,7 @@ import {
   Award,
   ArrowRight,
   Zap,
-  Heart,
-  Star
+  Heart
 } from 'lucide-react'
 
 const features = [
