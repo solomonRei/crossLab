@@ -1,6 +1,7 @@
 import { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { authApiService, AuthApiError } from '../services/authApi'
+import { logAction, logError, devLog } from '../config/devTools'
 
 // Auth states
 const AUTH_ACTIONS = {
@@ -27,6 +28,9 @@ const initialState = {
 }
 
 function authReducer(state, action) {
+  // Log actions to Reactotron
+  logAction(action.type, action.payload)
+  
   switch (action.type) {
     case AUTH_ACTIONS.LOGIN_START:
     case AUTH_ACTIONS.REGISTER_START:
@@ -39,6 +43,7 @@ function authReducer(state, action) {
       }
 
     case AUTH_ACTIONS.LOGIN_SUCCESS:
+      devLog('User logged in:', action.payload.user)
       return {
         ...state,
         isLoading: false,
@@ -50,6 +55,7 @@ function authReducer(state, action) {
       }
 
     case AUTH_ACTIONS.REGISTER_SUCCESS:
+      devLog('User registered successfully')
       return {
         ...state,
         isLoading: false,
@@ -58,6 +64,7 @@ function authReducer(state, action) {
       }
 
     case AUTH_ACTIONS.LOAD_USER_SUCCESS:
+      devLog('User data loaded:', action.payload.user)
       return {
         ...state,
         isLoading: false,
@@ -70,6 +77,7 @@ function authReducer(state, action) {
     case AUTH_ACTIONS.LOGIN_FAILURE:
     case AUTH_ACTIONS.REGISTER_FAILURE:
     case AUTH_ACTIONS.LOAD_USER_FAILURE:
+      logError(action.payload.message, `Auth ${action.type}`)
       return {
         ...state,
         isLoading: false,
@@ -81,6 +89,7 @@ function authReducer(state, action) {
       }
 
     case AUTH_ACTIONS.LOGOUT:
+      devLog('User logged out')
       return {
         ...state,
         user: null,

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { authApiService } from '../services/authApi'
-import { shouldShowApiSwitcher, devLog } from '../config/devTools'
+import { shouldShowApiSwitcher, devLog, logAction } from '../config/devTools'
 
 export function ApiSwitcher() {
   const [apiInfo, setApiInfo] = useState(authApiService.getApiInfo())
@@ -14,17 +14,25 @@ export function ApiSwitcher() {
     devLog('ApiSwitcher mounted with config:', apiInfo)
   }, [])
 
-  // Only render if allowed by configuration
+  // Only render if allowed by configuration (should be true for all pages in dev)
   if (!shouldShowApiSwitcher()) {
     return null
   }
 
   const handleSwitchMode = (mode) => {
     try {
+      const oldMode = apiInfo.mode
       const newUrl = authApiService.switchApiMode(mode)
       setApiInfo(authApiService.getApiInfo())
       
-      devLog(`API switched from ${apiInfo.mode} to ${mode}:`, newUrl)
+      // Log action to Reactotron
+      logAction('API_MODE_SWITCH', {
+        from: oldMode,
+        to: mode,
+        url: newUrl
+      })
+      
+      devLog(`API switched from ${oldMode} to ${mode}:`, newUrl)
       
       // Show success message
       toast.success(`API switched to ${mode.toUpperCase()}`, {
@@ -111,6 +119,9 @@ export function ApiSwitcher() {
           <p className="text-yellow-600 mt-1">⚠️ Development tool only</p>
           <p className="text-xs text-gray-400 mt-1">
             NODE_ENV: {process.env.NODE_ENV}
+          </p>
+          <p className="text-xs text-blue-500 mt-1">
+            📊 Logs sent to Reactotron
           </p>
         </div>
       </div>
