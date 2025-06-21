@@ -1,28 +1,30 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { Toaster } from 'react-hot-toast'
-import { AuthProvider } from './contexts/AuthContext'
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
+import { AuthProvider } from "./contexts/AuthContext";
 
 // Layouts
-import { PublicLayout } from './layouts/PublicLayout'
-import { DashboardLayout } from './layouts/DashboardLayout'
+import { PublicLayout } from "./layouts/PublicLayout";
+import { DashboardLayout } from "./layouts/DashboardLayout";
 
 // Pages
-import { Home } from './pages/Home'
-import { About } from './pages/About'
-import { Projects } from './pages/Projects'
-import { Showcase } from './pages/Showcase'
-import { Auth } from './pages/Auth'
-import { Profile } from './pages/Profile'
-import { Review } from './pages/Review'
-import { NotificationSettings } from './pages/NotificationSettings'
+import { Home } from "./pages/Home";
+import { About } from "./pages/About";
+import { Projects } from "./pages/Projects";
+import { Showcase } from "./pages/Showcase";
+import { Auth } from "./pages/Auth";
+import { Profile } from "./pages/Profile";
+import { Review } from "./pages/Review";
+import { NotificationSettings } from "./pages/NotificationSettings";
+import { ProjectView } from "./pages/ProjectView";
+import { ProjectCreate } from "./pages/ProjectCreate";
 
 // Protected Route component
-import { ProtectedRoute } from './components/ProtectedRoute'
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 // Development Tools
-import { ApiSwitcher } from './components/ApiSwitcher'
-import { DevToolsPanel } from './components/DevToolsPanel'
-import { TokenStatus } from './components/TokenStatus'
+import { ApiSwitcher } from "./components/ApiSwitcher";
+import { DevToolsPanel } from "./components/DevToolsPanel";
+import { TokenStatus } from "./components/TokenStatus";
 
 function App() {
   return (
@@ -59,6 +61,8 @@ function App() {
               }
             >
               <Route index element={<Projects />} />
+              <Route path="create" element={<ProjectCreate />} />
+              <Route path=":id" element={<ProjectView />} />
             </Route>
 
             <Route
@@ -114,15 +118,15 @@ function App() {
               success: {
                 duration: 3000,
                 style: {
-                  background: '#10B981',
-                  color: 'white',
+                  background: "#10B981",
+                  color: "white",
                 },
               },
               error: {
                 duration: 5000,
                 style: {
-                  background: '#EF4444',
-                  color: 'white',
+                  background: "#EF4444",
+                  color: "white",
                 },
               },
             }}
@@ -135,7 +139,7 @@ function App() {
         </div>
       </Router>
     </AuthProvider>
-  )
+  );
 }
 
-export default App
+export default App;
