@@ -1,8 +1,8 @@
-import { Link } from 'react-router-dom'
+import { Link, Outlet } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
 import { Github, Twitter, Linkedin } from 'lucide-react'
 
-export function PublicLayout({ children }) {
+export function PublicLayout() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
@@ -28,19 +28,19 @@ export function PublicLayout({ children }) {
           </nav>
 
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" asChild>
-              <Link to="/auth">Sign In</Link>
-            </Button>
-            <Button asChild>
-              <Link to="/auth">Get Started</Link>
-            </Button>
+            <Link to="/auth">
+              <Button variant="ghost">Sign In</Button>
+            </Link>
+            <Link to="/auth">
+              <Button>Get Started</Button>
+            </Link>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="flex-1">
-        {children}
+        <Outlet />
       </main>
 
       {/* Footer */}

@@ -32,9 +32,17 @@ import {
 import { users, demoProjects } from "../data/mockData";
 import { getAvatarFallback, formatDate } from "../lib/utils";
 import { useProfileStore } from "../store/userStore";
+import { useAuth } from "../contexts/AuthContext";
 
 export function Profile() {
   const { profileData, setProfileData } = useProfileStore();
+  const { user } = useAuth();
+  
+  // Fallback to mock data for demo purposes
+  const currentUser = user || users[0];
+  const userProjects = demoProjects.filter(project => 
+    project.teamMembers.includes(currentUser.name || profileData.name)
+  );
 
   const handleDataParsed = (parsedCvData) => {
     const newProfileData = {
@@ -138,11 +146,12 @@ export function Profile() {
 
                 <div className="flex space-x-4 mt-4">
                   {profileData.github && (
-                    <Button variant="outline" size="sm" asChild>
+                    <Button variant="outline" size="sm">
                       <a
                         href={profileData.github}
                         target="_blank"
                         rel="noopener noreferrer"
+                        className="flex items-center"
                       >
                         <Github className="h-4 w-4 mr-2" />
                         GitHub
@@ -150,11 +159,12 @@ export function Profile() {
                     </Button>
                   )}
                   {profileData.linkedin && (
-                    <Button variant="outline" size="sm" asChild>
+                    <Button variant="outline" size="sm">
                       <a
                         href={profileData.linkedin}
                         target="_blank"
                         rel="noopener noreferrer"
+                        className="flex items-center"
                       >
                         <Linkedin className="h-4 w-4 mr-2" />
                         LinkedIn

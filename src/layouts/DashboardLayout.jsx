@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import {
-  Home,
-  FolderOpen,
-  User,
-  Trophy,
-  FileCheck,
+import { useState } from 'react'
+import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom'
+import { 
+  Home, 
+  FolderOpen, 
+  User, 
+  Trophy, 
+  FileCheck, 
   MessageCircle,
   Bell,
   Settings,
@@ -13,11 +13,16 @@ import {
   Sun,
   Menu,
   X,
-} from "lucide-react";
-import { Button } from "../components/ui/Button";
-import { Avatar, AvatarImage, AvatarFallback } from "../components/ui/Avatar";
-import { Badge } from "../components/ui/Badge";
-import { useProfileStore } from "../store/userStore";
+  LogOut
+} from 'lucide-react'
+import { Button } from '../components/ui/Button'
+import { Avatar, AvatarImage, AvatarFallback } from '../components/ui/Avatar'
+import { Badge } from '../components/ui/Badge'
+import { NotificationCenter } from '../components/NotificationCenter'
+import { useNotifications } from '../hooks/useNotifications'
+import { useAuth } from '../contexts/AuthContext'
+import { useProfileStore } from '../store/userStore'
+import { getAvatarFallback } from '../lib/utils'
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -27,17 +32,46 @@ const navigation = [
   { name: "Profile", href: "/profile", icon: User },
 ];
 
-export function DashboardLayout({ children }) {
-  const location = useLocation();
-  const [darkMode, setDarkMode] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const profileData = useProfileStore((state) => state.profileData);
+export function DashboardLayout() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { user, logout } = useAuth()
+  const [darkMode, setDarkMode] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [notificationCenterOpen, setNotificationCenterOpen] = useState(false)
+  
+  // Get profile data from store (for CV functionality)
+  const profileData = useProfileStore((state) => state.profileData)
+  
+  // Initialize notifications with user ID
+  const { getCounts } = useNotifications(user?.id || 'anonymous')
+  const { unread: unreadCount } = getCounts()
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
     document.documentElement.classList.toggle("dark");
   };
+
+  const handleNotificationClick = () => {
+    setNotificationCenterOpen(!notificationCenterOpen)
+  }
+
+  const handleLogout = () => {
+    logout()
+    navigate('/')
+  }
+
+  // Use profile data if available, otherwise fallback to auth user data
+  const currentUser = {
+    ...user,
+    name: profileData.name || (user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.firstName || user?.email || 'User'),
+    role: profileData.role || user?.role || 'User',
+    avatar: profileData.avatar || user?.avatar,
+    level: profileData.level,
+    xp: profileData.xp
+  }
+
+  const displayName = currentUser.name || 'User'
 
   return (
     <div className="flex h-screen bg-background">
@@ -91,28 +125,38 @@ export function DashboardLayout({ children }) {
           <div className="p-4 border-t">
             <div className="flex items-center space-x-3">
               <Avatar>
-                <AvatarImage src={profileData.avatar} alt={profileData.name} />
-                <AvatarFallback>
-                  {profileData.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")}
-                </AvatarFallback>
+                <AvatarImage src={currentUser.avatar} alt={displayName} />
+                <AvatarFallback>{getAvatarFallback(displayName)}</AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <p className="text-sm font-medium">{profileData.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {profileData.role}
-                </p>
+                <p className="text-sm font-medium">{displayName}</p>
+                <p className="text-xs text-muted-foreground">{currentUser.role}</p>
               </div>
             </div>
-            <div className="mt-3 flex items-center justify-between">
-              <Badge variant="secondary" className="text-xs">
-                Level {profileData.level}
-              </Badge>
-              <span className="text-xs text-muted-foreground">
-                {profileData.xp} XP
-              </span>
+            
+            {/* Level and XP (if available from CV) */}
+            {currentUser.level && (
+              <div className="mt-3 flex items-center justify-between">
+                <Badge variant="secondary" className="text-xs">
+                  Level {currentUser.level}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {currentUser.xp} XP
+                </span>
+              </div>
+            )}
+            
+            {/* Logout Button */}
+            <div className="mt-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="w-full justify-start text-muted-foreground hover:text-foreground"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
             </div>
           </div>
         </div>
@@ -139,20 +183,46 @@ export function DashboardLayout({ children }) {
                 <Moon className="h-5 w-5" />
               )}
             </Button>
-            <Button variant="ghost" size="icon">
-              <Bell className="h-5 w-5" />
-            </Button>
+            
+            <div className="relative">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleNotificationClick}
+                className="relative"
+              >
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center"
+                  >
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Badge>
+                )}
+              </Button>
+              
+              <NotificationCenter 
+                isOpen={notificationCenterOpen}
+                onClose={() => setNotificationCenterOpen(false)}
+              />
+            </div>
+            
             <Button variant="ghost" size="icon">
               <MessageCircle className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon">
-              <Settings className="h-5 w-5" />
-            </Button>
+            <Link to="/settings/notifications">
+              <Button variant="ghost" size="icon">
+                <Settings className="h-5 w-5" />
+              </Button>
+            </Link>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        <main className="flex-1 overflow-auto p-6">
+          <Outlet />
+        </main>
       </div>
 
       {/* Mobile overlay */}

@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import { Button } from '../components/ui/Button'
 import { Card, CardContent, CardHeader } from '../components/ui/Card'
 import { Input, Label } from '../components/ui/Input'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs'
+import { useAuth } from '../contexts/AuthContext'
 import { 
   Mail, 
   Lock, 
@@ -14,7 +16,8 @@ import {
   ChevronDown,
   ChevronUp,
   User,
-  ArrowLeft
+  ArrowLeft,
+  AlertCircle
 } from 'lucide-react'
 
 // Google Icon Component
@@ -83,34 +86,21 @@ const universityProviders = [
     id: 'usm',
     name: 'USM',
     fullName: 'Universitatea de Stat din Moldova',
-    icon: USMIcon,
     color: 'bg-blue-600 hover:bg-blue-700'
   },
   {
     id: 'utm',
     name: 'UTM', 
     fullName: 'Universitatea Tehnică a Moldovei',
-    icon: UTMIcon,
     color: 'bg-green-600 hover:bg-green-700'
-  },
-  {
-    id: 'moodle',
-    name: 'Moodle',
-    fullName: 'Moodle University Platform',
-    icon: MoodleIcon,
-    color: 'bg-orange-600 hover:bg-orange-700'
-  },
-  {
-    id: 'outlook',
-    name: 'Outlook (.edu)',
-    fullName: 'Microsoft Education SSO',
-    icon: OutlookIcon,
-    color: 'bg-indigo-600 hover:bg-indigo-700'
   }
 ]
 
 export function Auth() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { login, register, isLoading, error, errors, clearErrors, isAuthenticated } = useAuth()
+  
   const [activeTab, setActiveTab] = useState('login')
   const [showPassword, setShowPassword] = useState(false)
   const [showUniversityOptions, setShowUniversityOptions] = useState(false)
@@ -120,10 +110,24 @@ export function Auth() {
     confirmPassword: '',
     firstName: '',
     lastName: '',
+    role: 'User',
     acceptTerms: false
   })
-  const [errors, setErrors] = useState({})
-  const [isLoading, setIsLoading] = useState(false)
+  const [validationErrors, setValidationErrors] = useState({})
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      const from = location.state?.from?.pathname || '/dashboard'
+      navigate(from, { replace: true })
+    }
+  }, [isAuthenticated, navigate, location])
+
+  // Clear errors when switching tabs
+  useEffect(() => {
+    clearErrors()
+    setValidationErrors({})
+  }, [activeTab])
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -131,104 +135,91 @@ export function Auth() {
   }
 
   const validateForm = () => {
-    const newErrors = {}
-
-    // Email validation
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required'
-    } else if (!validateEmail(formData.email)) {
-      newErrors.email = 'Please enter a valid email'
+    const errors = {}
+    
+    if (!formData.email || !validateEmail(formData.email)) {
+      errors.email = 'Please enter a valid email address'
     }
-
-    // Password validation
-    if (!formData.password.trim()) {
-      newErrors.password = 'Password is required'
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters'
+    
+    if (!formData.password || formData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters'
     }
-
-    // Additional validation for signup
+    
     if (activeTab === 'signup') {
-      if (!formData.firstName.trim()) {
-        newErrors.firstName = 'First name is required'
+      if (!formData.firstName || formData.firstName.length < 2) {
+        errors.firstName = 'First name must be at least 2 characters'
       }
-      if (!formData.lastName.trim()) {
-        newErrors.lastName = 'Last name is required'
+      if (!formData.lastName || formData.lastName.length < 2) {
+        errors.lastName = 'Last name must be at least 2 characters'
       }
-      if (!formData.confirmPassword) {
-        newErrors.confirmPassword = 'Please confirm your password'
-      } else if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = 'Passwords do not match'
+      if (formData.password !== formData.confirmPassword) {
+        errors.confirmPassword = 'Passwords do not match'
       }
       if (!formData.acceptTerms) {
-        newErrors.acceptTerms = 'You must accept the terms of service'
+        errors.acceptTerms = 'You must accept the terms of service'
       }
     }
-
-    setErrors(newErrors)
-    const isValid = Object.keys(newErrors).length === 0
-    console.log('Form validation result:', { 
-      activeTab, 
-      isValid, 
-      errors: newErrors, 
-      formData: {
-        ...formData,
-        password: formData.password ? '***' : '',
-        confirmPassword: formData.confirmPassword ? '***' : ''
-      }
-    })
-    return isValid
+    
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    console.log('Form submitted, validating...', { formData, activeTab })
     
     if (!validateForm()) {
-      console.log('Validation failed:', errors)
       return
     }
-
-    console.log('Validation passed, submitting...')
-    setIsLoading(true)
     
-    // Simulate API call
-    setTimeout(() => {
-      console.log(`${activeTab} form submitted successfully:`, formData)
-      setIsLoading(false)
-      // Navigate to dashboard on success
-      console.log('Navigating to dashboard...')
-      navigate('/dashboard')
-    }, 1500)
+    if (activeTab === 'login') {
+      const result = await login(formData.email, formData.password)
+      if (result.success) {
+        const from = location.state?.from?.pathname || '/dashboard'
+        navigate(from, { replace: true })
+      }
+    } else {
+      const registerData = {
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        role: formData.role
+      }
+      
+      const result = await register(registerData)
+      if (result.success) {
+        // After successful registration, switch to login tab
+        setActiveTab('login')
+        setFormData({
+          ...formData,
+          password: '',
+          confirmPassword: '',
+          firstName: '',
+          lastName: '',
+          acceptTerms: false
+        })
+        // Show success message
+        toast.success('Registration successful! Please log in.')
+      }
+    }
   }
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }))
+    if (validationErrors[field]) {
+      setValidationErrors(prev => ({ ...prev, [field]: '' }))
     }
   }
 
   const handleOAuthLogin = (provider) => {
-    console.log(`Initiating ${provider} OAuth login`)
-    setIsLoading(true)
-    
-    // Simulate OAuth redirect
-    setTimeout(() => {
-      setIsLoading(false)
-      navigate('/dashboard')
-    }, 2000)
+    // OAuth integration would go here
+    console.log(`OAuth login with ${provider} not implemented yet`)
   }
 
   const handleUniversityLogin = (university) => {
-    console.log(`Initiating ${university.name} SSO login`)
-    setIsLoading(true)
-    
-    // Simulate university SSO redirect
-    setTimeout(() => {
-      setIsLoading(false)
-      navigate('/dashboard')
-    }, 2000)
+    // University SSO integration would go here
+    console.log(`University SSO login with ${university.name} not implemented yet`)
   }
 
   return (
@@ -267,6 +258,25 @@ export function Auth() {
           </CardHeader>
 
           <CardContent className="space-y-6">
+            {/* Error Display */}
+            {(error || errors.length > 0) && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                <div className="flex items-center">
+                  <AlertCircle className="h-4 w-4 text-red-500 mr-2" />
+                  <span className="text-sm text-red-700">
+                    {error || 'Please check the following errors:'}
+                  </span>
+                </div>
+                {errors.length > 0 && (
+                  <ul className="mt-2 text-sm text-red-600 list-disc list-inside">
+                    {errors.map((err, index) => (
+                      <li key={index}>{err}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+
             <Tabs value={activeTab}>
               {/* Login Tab */}
               <TabsContent value="login">
@@ -284,7 +294,7 @@ export function Auth() {
                         onChange={(e) => handleInputChange('email', e.target.value)}
                       />
                     </div>
-                    {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+                    {validationErrors.email && <p className="text-sm text-red-500">{validationErrors.email}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -307,7 +317,7 @@ export function Auth() {
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
-                    {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+                    {validationErrors.password && <p className="text-sm text-red-500">{validationErrors.password}</p>}
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -342,7 +352,7 @@ export function Auth() {
                           onChange={(e) => handleInputChange('firstName', e.target.value)}
                         />
                       </div>
-                      {errors.firstName && <p className="text-sm text-red-500">{errors.firstName}</p>}
+                      {validationErrors.firstName && <p className="text-sm text-red-500">{validationErrors.firstName}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="lastName">Last Name</Label>
@@ -352,7 +362,7 @@ export function Auth() {
                         value={formData.lastName}
                         onChange={(e) => handleInputChange('lastName', e.target.value)}
                       />
-                      {errors.lastName && <p className="text-sm text-red-500">{errors.lastName}</p>}
+                      {validationErrors.lastName && <p className="text-sm text-red-500">{validationErrors.lastName}</p>}
                     </div>
                   </div>
 
@@ -369,7 +379,21 @@ export function Auth() {
                         onChange={(e) => handleInputChange('email', e.target.value)}
                       />
                     </div>
-                    {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+                    {validationErrors.email && <p className="text-sm text-red-500">{validationErrors.email}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="role">Role</Label>
+                    <select
+                      id="role"
+                      className="w-full p-2 border rounded-md bg-background"
+                      value={formData.role}
+                      onChange={(e) => handleInputChange('role', e.target.value)}
+                    >
+                      <option value="User">Student</option>
+                      <option value="Creator">Creator</option>
+                      <option value="Admin">Admin</option>
+                    </select>
                   </div>
 
                   <div className="space-y-2">
@@ -392,7 +416,7 @@ export function Auth() {
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
-                    {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+                    {validationErrors.password && <p className="text-sm text-red-500">{validationErrors.password}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -408,7 +432,7 @@ export function Auth() {
                         onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                       />
                     </div>
-                    {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
+                    {validationErrors.confirmPassword && <p className="text-sm text-red-500">{validationErrors.confirmPassword}</p>}
                   </div>
 
                   <div className="space-y-4">
@@ -426,7 +450,7 @@ export function Auth() {
                         <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
                       </span>
                     </label>
-                    {errors.acceptTerms && <p className="text-sm text-red-500">{errors.acceptTerms}</p>}
+                    {validationErrors.acceptTerms && <p className="text-sm text-red-500">{validationErrors.acceptTerms}</p>}
                   </div>
 
                   <Button type="submit" className="w-full" disabled={isLoading}>
@@ -482,7 +506,7 @@ export function Auth() {
                       transition={{ duration: 0.3 }}
                       className="overflow-hidden"
                     >
-                      <div className="grid grid-cols-2 gap-2 p-2">
+                      <div className="grid grid-cols-1 gap-2 p-2">
                         {universityProviders.map((provider) => (
                           <Button
                             key={provider.id}
@@ -492,7 +516,9 @@ export function Auth() {
                             disabled={isLoading}
                           >
                             <div className="flex items-center space-x-2 w-full">
-                              <provider.icon className="h-4 w-4 flex-shrink-0 text-primary" />
+                              <div className={`w-8 h-8 rounded ${provider.color} flex items-center justify-center text-white text-xs font-bold`}>
+                                {provider.name}
+                              </div>
                               <div className="min-w-0 flex-1">
                                 <div className="font-medium text-sm truncate">{provider.name}</div>
                                 <div className="text-xs text-muted-foreground truncate">{provider.fullName}</div>
