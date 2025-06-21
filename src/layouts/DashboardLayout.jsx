@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, Outlet } from 'react-router-dom'
 import { 
   Home, 
   FolderOpen, 
@@ -17,6 +17,8 @@ import {
 import { Button } from '../components/ui/Button'
 import { Avatar, AvatarImage, AvatarFallback } from '../components/ui/Avatar'
 import { Badge } from '../components/ui/Badge'
+import { NotificationCenter } from '../components/NotificationCenter'
+import { useNotifications } from '../hooks/useNotifications'
 import { users } from '../data/mockData'
 
 const navigation = [
@@ -27,16 +29,25 @@ const navigation = [
   { name: 'Profile', href: '/profile', icon: User },
 ]
 
-export function DashboardLayout({ children }) {
+export function DashboardLayout() {
   const location = useLocation()
   const [darkMode, setDarkMode] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [notificationCenterOpen, setNotificationCenterOpen] = useState(false)
   
-  const currentUser = users[0] // Mock current user
+  const currentUser = users[0]
+  
+  // Initialize notifications
+  const { getCounts } = useNotifications(currentUser.id)
+  const { unread: unreadCount } = getCounts()
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode)
     document.documentElement.classList.toggle('dark')
+  }
+
+  const handleNotificationClick = () => {
+    setNotificationCenterOpen(!notificationCenterOpen)
   }
 
   return (
@@ -122,9 +133,31 @@ export function DashboardLayout({ children }) {
             <Button variant="ghost" size="icon" onClick={toggleDarkMode}>
               {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
-            <Button variant="ghost" size="icon">
-              <Bell className="h-5 w-5" />
-            </Button>
+            
+            <div className="relative">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleNotificationClick}
+                className="relative"
+              >
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center"
+                  >
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Badge>
+                )}
+              </Button>
+              
+              <NotificationCenter 
+                isOpen={notificationCenterOpen}
+                onClose={() => setNotificationCenterOpen(false)}
+              />
+            </div>
+            
             <Button variant="ghost" size="icon">
               <MessageCircle className="h-5 w-5" />
             </Button>
@@ -136,7 +169,7 @@ export function DashboardLayout({ children }) {
 
         {/* Page Content */}
         <main className="flex-1 overflow-auto p-6">
-          {children}
+          <Outlet />
         </main>
       </div>
 

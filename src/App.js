@@ -10,24 +10,44 @@ import { ProjectView } from './pages/ProjectView'
 import { Profile } from './pages/Profile'
 import { Showcase } from './pages/Showcase'
 import { Review } from './pages/Review'
+import { NotificationSettings } from './pages/NotificationSettings'
+import './index.css'
 
 function App() {
   return (
     <Router>
       <Routes>
         {/* Public routes */}
-        <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/login" element={<Auth />} />
-        <Route path="/signup" element={<Auth />} />
-        
+        <Route path="/" element={<PublicLayout />}>
+          <Route index element={<Home />} />
+          <Route path="auth" element={<Auth />} />
+        </Route>
+
         {/* Dashboard routes - authenticated */}
-        <Route path="/dashboard" element={<DashboardLayout><Projects /></DashboardLayout>} />
-        <Route path="/projects" element={<DashboardLayout><Projects /></DashboardLayout>} />
-        <Route path="/projects/:id" element={<DashboardLayout><ProjectView /></DashboardLayout>} />
-        <Route path="/profile" element={<DashboardLayout><Profile /></DashboardLayout>} />
-        <Route path="/showcase" element={<DashboardLayout><Showcase /></DashboardLayout>} />
-        <Route path="/reviews" element={<DashboardLayout><Review /></DashboardLayout>} />
+        <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route index element={<Navigate to="/projects" replace />} />
+        </Route>
+        
+        <Route path="/projects" element={<DashboardLayout />}>
+          <Route index element={<Projects />} />
+          <Route path=":id" element={<ProjectView />} />
+        </Route>
+        
+        <Route path="/profile" element={<DashboardLayout />}>
+          <Route index element={<Profile />} />
+        </Route>
+        
+        <Route path="/showcase" element={<DashboardLayout />}>
+          <Route index element={<Showcase />} />
+        </Route>
+        
+        <Route path="/reviews" element={<DashboardLayout />}>
+          <Route index element={<Review />} />
+        </Route>
+
+        <Route path="/settings" element={<DashboardLayout />}>
+          <Route path="notifications" element={<NotificationSettings />} />
+        </Route>
         
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
