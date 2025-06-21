@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import { Button } from '../components/ui/Button'
 import { Card, CardContent, CardHeader } from '../components/ui/Card'
 import { Input, Label } from '../components/ui/Input'
@@ -199,7 +200,7 @@ export function Auth() {
           acceptTerms: false
         })
         // Show success message
-        alert('Registration successful! Please log in.')
+        toast.success('Registration successful! Please log in.')
       }
     }
   }
