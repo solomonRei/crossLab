@@ -1,4 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
+import toast from 'react-hot-toast'
 import { authApiService, AuthApiError } from '../services/authApi'
 
 // Auth states
@@ -101,69 +102,59 @@ function authReducer(state, action) {
   }
 }
 
+// Create Auth Context
 const AuthContext = createContext()
 
 export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, initialState)
 
-  const logout = useCallback(() => {
-    authApiService.logout()
-    dispatch({ type: AUTH_ACTIONS.LOGOUT })
-  }, [])
-
+  // Load user on app start if token exists
   const loadUser = useCallback(async () => {
-    if (!authApiService.isAuthenticated()) {
+    if (!authApiService.getToken()) {
       return
     }
 
     dispatch({ type: AUTH_ACTIONS.LOAD_USER_START })
-    
+
     try {
       const response = await authApiService.getCurrentUser()
       
-      if (response.success) {
+      if (response.success && response.data) {
         dispatch({
           type: AUTH_ACTIONS.LOAD_USER_SUCCESS,
-          payload: {
-            user: response.data
-          }
+          payload: { user: response.data }
         })
       } else {
-        throw new AuthApiError(
-          response.message || 'Failed to load user',
-          401
-        )
+        throw new Error('Failed to load user data')
       }
     } catch (error) {
-      // If unauthorized, logout
-      if (error.status === 401) {
-        logout()
-      } else {
-        dispatch({
-          type: AUTH_ACTIONS.LOAD_USER_FAILURE,
-          payload: {
-            message: error.message,
-            errors: error.errors || []
-          }
-        })
-      }
+      console.error('Load user error:', error)
+      
+      // Clear invalid token
+      authApiService.setToken(null)
+      
+      dispatch({
+        type: AUTH_ACTIONS.LOAD_USER_FAILURE,
+        payload: {
+          message: error.message || 'Failed to load user',
+          errors: error instanceof AuthApiError ? error.errors : []
+        }
+      })
     }
-  }, [logout])
+  }, [])
 
-  // Load user on mount if token exists
   useEffect(() => {
-    if (state.token && !state.user && !state.isLoading) {
-      loadUser()
-    }
-  }, [state.token, state.user, state.isLoading, loadUser])
+    loadUser()
+  }, [loadUser])
 
+  // Login function
   const login = async (email, password) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START })
-    
+
     try {
       const response = await authApiService.login({ email, password })
       
-      if (response.success) {
+      if (response.success && response.data) {
         dispatch({
           type: AUTH_ACTIONS.LOGIN_SUCCESS,
           payload: {
@@ -171,33 +162,34 @@ export function AuthProvider({ children }) {
             user: response.data.user
           }
         })
+        
+        toast.success(`Welcome back, ${response.data.user?.firstName || 'User'}!`)
         return { success: true, data: response.data }
       } else {
-        throw new AuthApiError(
-          response.message || 'Login failed',
-          400,
-          response.errors || []
-        )
+        throw new Error(response.message || 'Login failed')
       }
     } catch (error) {
+      console.error('Login error:', error)
+      
+      const errorMessage = error.message || 'Login failed'
+      const errors = error instanceof AuthApiError ? error.errors : []
+      
       dispatch({
         type: AUTH_ACTIONS.LOGIN_FAILURE,
-        payload: {
-          message: error.message,
-          errors: error.errors || []
-        }
+        payload: { message: errorMessage, errors }
       })
-      return { 
-        success: false, 
-        error: error.message, 
-        errors: error.errors || [] 
-      }
+      
+      // Show toast error
+      toast.error(errorMessage)
+      
+      return { success: false, error: errorMessage, errors }
     }
   }
 
+  // Register function
   const register = async (registerData) => {
     dispatch({ type: AUTH_ACTIONS.REGISTER_START })
-    
+
     try {
       const response = await authApiService.register(registerData)
       
@@ -205,47 +197,57 @@ export function AuthProvider({ children }) {
         dispatch({ type: AUTH_ACTIONS.REGISTER_SUCCESS })
         return { success: true, data: response.data }
       } else {
-        throw new AuthApiError(
-          response.message || 'Registration failed',
-          400,
-          response.errors || []
-        )
+        throw new Error(response.message || 'Registration failed')
       }
     } catch (error) {
+      console.error('Register error:', error)
+      
+      const errorMessage = error.message || 'Registration failed'
+      const errors = error instanceof AuthApiError ? error.errors : []
+      
       dispatch({
         type: AUTH_ACTIONS.REGISTER_FAILURE,
-        payload: {
-          message: error.message,
-          errors: error.errors || []
-        }
+        payload: { message: errorMessage, errors }
       })
-      return { 
-        success: false, 
-        error: error.message, 
-        errors: error.errors || [] 
-      }
+      
+      // Show toast error
+      toast.error(errorMessage)
+      
+      return { success: false, error: errorMessage, errors }
     }
   }
 
-  const clearErrors = useCallback(() => {
+  // Logout function
+  const logout = () => {
+    authApiService.logout()
+    dispatch({ type: AUTH_ACTIONS.LOGOUT })
+    toast.success('Logged out successfully')
+  }
+
+  // Clear errors
+  const clearErrors = () => {
     dispatch({ type: AUTH_ACTIONS.CLEAR_ERRORS })
-  }, [])
+  }
 
   const value = {
     ...state,
     login,
     register,
     logout,
-    loadUser,
-    clearErrors
+    clearErrors,
+    loadUser
   }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {
   const context = useContext(AuthContext)
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return context

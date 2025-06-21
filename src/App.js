@@ -1,6 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { ApiSwitcher } from './components/ApiSwitcher'
+import { shouldShowApiSwitcher } from './config/devTools'
 import { PublicLayout } from './layouts/PublicLayout'
 import { DashboardLayout } from './layouts/DashboardLayout'
 
@@ -60,14 +63,14 @@ function App() {
             <Route index element={<Showcase />} />
           </Route>
           
-          <Route path="/reviews" element={
+          <Route path="/review" element={
             <ProtectedRoute>
               <DashboardLayout />
             </ProtectedRoute>
           }>
             <Route index element={<Review />} />
           </Route>
-
+          
           <Route path="/settings" element={
             <ProtectedRoute>
               <DashboardLayout />
@@ -79,6 +82,35 @@ function App() {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        
+        {/* API Switcher - only available in development */}
+        {shouldShowApiSwitcher() && <ApiSwitcher />}
+        
+        {/* Global Toast Notifications */}
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#363636',
+              color: '#fff',
+            },
+            success: {
+              duration: 3000,
+              style: {
+                background: '#10B981',
+                color: '#fff',
+              },
+            },
+            error: {
+              duration: 5000,
+              style: {
+                background: '#EF4444',
+                color: '#fff',
+              },
+            },
+          }}
+        />
       </Router>
     </AuthProvider>
   )
