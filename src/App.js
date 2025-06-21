@@ -1,58 +1,82 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
+import { AuthProvider } from './contexts/AuthContext'
+
+// Layouts
 import { PublicLayout } from './layouts/PublicLayout'
 import { DashboardLayout } from './layouts/DashboardLayout'
 
 // Pages
 import { Home } from './pages/Home'
-import { Auth } from './pages/Auth'
 import { Projects } from './pages/Projects'
-import { ProjectView } from './pages/ProjectView'
+import { Auth } from './pages/Auth'
 import { Profile } from './pages/Profile'
-import { Showcase } from './pages/Showcase'
 import { Review } from './pages/Review'
-import { NotificationSettings } from './pages/NotificationSettings'
-import './index.css'
+
+// Protected Route component
+import { ProtectedRoute } from './components/ProtectedRoute'
+
+// Development Tools
+import { ApiSwitcher } from './components/ApiSwitcher'
+import { DevToolsPanel } from './components/DevToolsPanel'
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Public routes */}
-        <Route path="/" element={<PublicLayout />}>
-          <Route index element={<Home />} />
-          <Route path="auth" element={<Auth />} />
-        </Route>
+    <AuthProvider>
+      <Router>
+        <div className="App">
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<PublicLayout />}>
+              <Route index element={<Home />} />
+              <Route path="projects" element={<Projects />} />
+              <Route path="auth" element={<Auth />} />
+            </Route>
 
-        {/* Dashboard routes - authenticated */}
-        <Route path="/dashboard" element={<DashboardLayout />}>
-          <Route index element={<Navigate to="/projects" replace />} />
-        </Route>
-        
-        <Route path="/projects" element={<DashboardLayout />}>
-          <Route index element={<Projects />} />
-          <Route path=":id" element={<ProjectView />} />
-        </Route>
-        
-        <Route path="/profile" element={<DashboardLayout />}>
-          <Route index element={<Profile />} />
-        </Route>
-        
-        <Route path="/showcase" element={<DashboardLayout />}>
-          <Route index element={<Showcase />} />
-        </Route>
-        
-        <Route path="/reviews" element={<DashboardLayout />}>
-          <Route index element={<Review />} />
-        </Route>
+            {/* Protected dashboard routes */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Profile />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="review" element={<Review />} />
+              <Route path="projects" element={<Projects />} />
+            </Route>
+          </Routes>
 
-        <Route path="/settings" element={<DashboardLayout />}>
-          <Route path="notifications" element={<NotificationSettings />} />
-        </Route>
-        
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+          {/* Toast notifications */}
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 3000,
+              success: {
+                duration: 3000,
+                style: {
+                  background: '#10B981',
+                  color: 'white',
+                },
+              },
+              error: {
+                duration: 5000,
+                style: {
+                  background: '#EF4444',
+                  color: 'white',
+                },
+              },
+            }}
+          />
+
+          {/* Development Tools - shown on all pages in development */}
+          <ApiSwitcher />
+          <DevToolsPanel />
+        </div>
+      </Router>
+    </AuthProvider>
   )
 }
 

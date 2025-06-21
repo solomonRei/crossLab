@@ -1,0 +1,915 @@
+# CrossLab Platform - Business Requirements Document (BRD)
+
+## 1. PROJECT OVERVIEW
+
+### 1.1 Project Description
+CrossLab is a comprehensive project-based learning platform that connects students from different disciplines (developers, designers, business analysts, legal advisors, marketers) into cross-functional teams to solve real-world challenges provided by companies. The platform features AI-powered team matching, role-specific AI copilots, peer review systems, and live demo showcases.
+
+### 1.2 Core Features
+- AI-powered smart team matchmaking
+- Role-specific AI copilots for different disciplines
+- Project-based collaborative learning
+- Peer review and feedback system
+- Live demo showcase and portfolio building
+- Real-time team communication
+- Progress tracking and sprint management
+- Gamification with XP, levels, and achievements
+- Notification system
+
+## 2. BACKEND ENTITIES & DATA MODELS
+
+### 2.1 User Entity
+```
+User {
+  id: UUID (Primary Key)
+  email: String (Unique, Required)
+  password: String (Hashed, Required)
+  firstName: String (Required)
+  lastName: String (Required)
+  avatar: String (URL, Optional)
+  bio: String (Optional)
+  role: Enum ['User', 'Creator', 'Admin'] (Required)
+  preferredRole: Enum ['developer', 'designer', 'analyst', 'legal', 'marketing'] (Required)
+  xp: Integer (Default: 0)
+  level: Integer (Default: 1)
+  badges: Array[String] (Default: [])
+  completedProjects: Integer (Default: 0)
+  skills: Array[String] (Optional)
+  university: String (Optional)
+  graduationYear: Integer (Optional)
+  location: String (Optional)
+  socialLinks: Object {
+    github: String (Optional)
+    linkedin: String (Optional)
+    portfolio: String (Optional)
+  }
+  emailVerified: Boolean (Default: false)
+  isActive: Boolean (Default: true)
+  lastLoginAt: DateTime (Optional)
+  createdAt: DateTime (Required)
+  updatedAt: DateTime (Required)
+}
+```
+
+### 2.2 Project Entity
+```
+Project {
+  id: UUID (Primary Key)
+  title: String (Required)
+  description: Text (Required)
+  shortDescription: String (Required)
+  tags: Array[String] (Required)
+  rolesNeeded: Array[Enum] ['developer', 'designer', 'analyst', 'legal', 'marketing'] (Required)
+  maxParticipants: Integer (Required)
+  currentParticipants: Integer (Default: 0)
+  difficulty: Enum ['Easy', 'Medium', 'Hard'] (Required)
+  duration: String (Required) // e.g., "4 weeks"
+  durationInWeeks: Integer (Required)
+  deadline: DateTime (Required)
+  startDate: DateTime (Optional)
+  endDate: DateTime (Optional)
+  company: String (Required)
+  companyLogo: String (URL, Optional)
+  status: Enum ['recruiting', 'in-progress', 'completed', 'cancelled'] (Default: 'recruiting')
+  progress: Float (Default: 0.0) // 0.0 to 1.0
+  budget: Float (Optional)
+  rewards: Object {
+    xp: Integer (Default: 100)
+    certificates: Boolean (Default: false)
+    recommendations: Boolean (Default: false)
+  }
+  requirements: Text (Optional)
+  deliverables: Array[String] (Optional)
+  resources: Array[Object] {
+    title: String
+    url: String
+    type: Enum ['document', 'video', 'link', 'tool']
+  }
+  isPublic: Boolean (Default: true)
+  isFeatured: Boolean (Default: false)
+  createdBy: UUID (Foreign Key -> User.id)
+  createdAt: DateTime (Required)
+  updatedAt: DateTime (Required)
+}
+```
+
+### 2.3 Team Entity
+```
+Team {
+  id: UUID (Primary Key)
+  projectId: UUID (Foreign Key -> Project.id)
+  name: String (Optional)
+  maxMembers: Integer (Default: 6)
+  isComplete: Boolean (Default: false)
+  inviteCode: String (Unique, Optional)
+  teamLead: UUID (Foreign Key -> User.id, Optional)
+  createdAt: DateTime (Required)
+  updatedAt: DateTime (Required)
+}
+```
+
+### 2.4 TeamMember Entity
+```
+TeamMember {
+  id: UUID (Primary Key)
+  teamId: UUID (Foreign Key -> Team.id)
+  userId: UUID (Foreign Key -> User.id)
+  role: String (Required) // e.g., "Tech Lead", "UX Designer"
+  joinedAt: DateTime (Required)
+  progress: Float (Default: 0.0) // Individual progress 0.0 to 1.0
+  isActive: Boolean (Default: true)
+  invitedBy: UUID (Foreign Key -> User.id, Optional)
+  invitedAt: DateTime (Optional)
+  acceptedAt: DateTime (Optional)
+}
+```
+
+### 2.5 Sprint Entity
+```
+Sprint {
+  id: UUID (Primary Key)
+  projectId: UUID (Foreign Key -> Project.id)
+  name: String (Required)
+  description: Text (Optional)
+  startDate: DateTime (Required)
+  endDate: DateTime (Required)
+  status: Enum ['planned', 'active', 'completed'] (Default: 'planned')
+  order: Integer (Required)
+  goals: Array[String] (Optional)
+  deliverables: Array[String] (Optional)
+  createdAt: DateTime (Required)
+  updatedAt: DateTime (Required)
+}
+```
+
+### 2.6 Task Entity
+```
+Task {
+  id: UUID (Primary Key)
+  sprintId: UUID (Foreign Key -> Sprint.id)
+  projectId: UUID (Foreign Key -> Project.id)
+  title: String (Required)
+  description: Text (Optional)
+  assigneeId: UUID (Foreign Key -> User.id, Optional)
+  status: Enum ['todo', 'in-progress', 'review', 'completed'] (Default: 'todo')
+  priority: Enum ['low', 'medium', 'high', 'urgent'] (Default: 'medium')
+  estimatedHours: Float (Optional)
+  actualHours: Float (Optional)
+  tags: Array[String] (Optional)
+  dependencies: Array[UUID] (Foreign Keys -> Task.id)
+  dueDate: DateTime (Optional)
+  completedAt: DateTime (Optional)
+  createdBy: UUID (Foreign Key -> User.id)
+  createdAt: DateTime (Required)
+  updatedAt: DateTime (Required)
+}
+```
+
+### 2.7 Review Entity
+```
+Review {
+  id: UUID (Primary Key)
+  projectId: UUID (Foreign Key -> Project.id)
+  reviewerId: UUID (Foreign Key -> User.id)
+  revieweeId: UUID (Foreign Key -> User.id)
+  isAnonymous: Boolean (Default: false)
+  status: Enum ['pending', 'completed', 'expired'] (Default: 'pending')
+  deadline: DateTime (Required)
+  ratings: Object {
+    technical: Integer (1-5)
+    collaboration: Integer (1-5)
+    initiative: Integer (1-5)
+    reliability: Integer (1-5)
+    creativity: Integer (1-5)
+  }
+  comment: Text (Optional)
+  isPublic: Boolean (Default: false)
+  submittedAt: DateTime (Optional)
+  createdAt: DateTime (Required)
+  updatedAt: DateTime (Required)
+}
+```
+
+### 2.8 DemoProject Entity
+```
+DemoProject {
+  id: UUID (Primary Key)
+  projectId: UUID (Foreign Key -> Project.id)
+  title: String (Required)
+  description: Text (Required)
+  demoVideoUrl: String (URL, Optional)
+  githubUrl: String (URL, Optional)
+  figmaUrl: String (URL, Optional)
+  liveUrl: String (URL, Optional)
+  presentationUrl: String (URL, Optional)
+  screenshots: Array[String] (URLs)
+  tags: Array[String] (Required)
+  likes: Integer (Default: 0)
+  views: Integer (Default: 0)
+  aiInsights: Text (Optional)
+  isPublic: Boolean (Default: true)
+  isFeatured: Boolean (Default: false)
+  submittedAt: DateTime (Required)
+  createdAt: DateTime (Required)
+  updatedAt: DateTime (Required)
+}
+```
+
+### 2.9 Notification Entity
+```
+Notification {
+  id: UUID (Primary Key)
+  userId: UUID (Foreign Key -> User.id)
+  type: Enum ['team_invite', 'project_update', 'review_request', 'demo_feedback', 'achievement', 'system', 'deadline_reminder']
+  title: String (Required)
+  message: Text (Required)
+  data: JSON (Optional) // Additional context data
+  priority: Enum ['low', 'normal', 'high'] (Default: 'normal')
+  isRead: Boolean (Default: false)
+  isActionable: Boolean (Default: false)
+  actionUrl: String (URL, Optional)
+  expiresAt: DateTime (Optional)
+  createdAt: DateTime (Required)
+}
+```
+
+### 2.10 Chat Entity
+```
+Chat {
+  id: UUID (Primary Key)
+  teamId: UUID (Foreign Key -> Team.id)
+  projectId: UUID (Foreign Key -> Project.id)
+  type: Enum ['team_chat', 'project_chat', 'ai_chat'] (Default: 'team_chat')
+  isActive: Boolean (Default: true)
+  createdAt: DateTime (Required)
+  updatedAt: DateTime (Required)
+}
+```
+
+### 2.11 ChatMessage Entity
+```
+ChatMessage {
+  id: UUID (Primary Key)
+  chatId: UUID (Foreign Key -> Chat.id)
+  senderId: UUID (Foreign Key -> User.id, Optional) // Null for AI messages
+  senderType: Enum ['user', 'ai', 'system'] (Default: 'user')
+  message: Text (Required)
+  messageType: Enum ['text', 'file', 'image', 'code', 'ai_suggestion'] (Default: 'text')
+  metadata: JSON (Optional) // File info, AI context, etc.
+  replyToId: UUID (Foreign Key -> ChatMessage.id, Optional)
+  isEdited: Boolean (Default: false)
+  editedAt: DateTime (Optional)
+  isDeleted: Boolean (Default: false)
+  deletedAt: DateTime (Optional)
+  createdAt: DateTime (Required)
+}
+```
+
+### 2.12 AICopilot Entity
+```
+AICopilot {
+  id: UUID (Primary Key)
+  name: String (Required) // "DevBot", "UXBot", etc.
+  description: String (Required)
+  role: Enum ['developer', 'designer', 'analyst', 'legal', 'marketing'] (Required)
+  capabilities: Array[String] (Required)
+  model: String (Required) // AI model identifier
+  isActive: Boolean (Default: true)
+  version: String (Default: "1.0")
+  createdAt: DateTime (Required)
+  updatedAt: DateTime (Required)
+}
+```
+
+### 2.13 Achievement Entity
+```
+Achievement {
+  id: UUID (Primary Key)
+  name: String (Required)
+  description: String (Required)
+  icon: String (URL or icon name)
+  type: Enum ['project', 'collaboration', 'skill', 'milestone', 'special'] (Required)
+  criteria: JSON (Required) // Achievement unlock criteria
+  xpReward: Integer (Default: 0)
+  badgeColor: String (Optional)
+  isActive: Boolean (Default: true)
+  rarity: Enum ['common', 'rare', 'epic', 'legendary'] (Default: 'common')
+  createdAt: DateTime (Required)
+}
+```
+
+### 2.14 UserAchievement Entity
+```
+UserAchievement {
+  id: UUID (Primary Key)
+  userId: UUID (Foreign Key -> User.id)
+  achievementId: UUID (Foreign Key -> Achievement.id)
+  earnedAt: DateTime (Required)
+  progress: Float (Default: 1.0) // For progressive achievements
+  metadata: JSON (Optional) // Additional context
+}
+```
+
+### 2.15 Like Entity
+```
+Like {
+  id: UUID (Primary Key)
+  userId: UUID (Foreign Key -> User.id)
+  targetType: Enum ['demo_project', 'chat_message', 'comment'] (Required)
+  targetId: UUID (Required) // Polymorphic reference
+  createdAt: DateTime (Required)
+}
+```
+
+### 2.16 ProjectApplication Entity
+```
+ProjectApplication {
+  id: UUID (Primary Key)
+  projectId: UUID (Foreign Key -> Project.id)
+  userId: UUID (Foreign Key -> User.id)
+  desiredRole: Enum ['developer', 'designer', 'analyst', 'legal', 'marketing'] (Required)
+  motivation: Text (Required)
+  relevantExperience: Text (Optional)
+  status: Enum ['pending', 'accepted', 'rejected', 'withdrawn'] (Default: 'pending')
+  appliedAt: DateTime (Required)
+  reviewedAt: DateTime (Optional)
+  reviewedBy: UUID (Foreign Key -> User.id, Optional)
+  reviewNotes: Text (Optional)
+}
+```
+
+## 3. API ENDPOINTS SPECIFICATION
+
+### 3.1 Authentication Endpoints
+```
+POST /api/v1/auth/register
+POST /api/v1/auth/login
+POST /api/v1/auth/logout
+POST /api/v1/auth/refresh
+GET  /api/v1/auth/me
+PUT  /api/v1/auth/me
+POST /api/v1/auth/forgot-password
+POST /api/v1/auth/reset-password
+POST /api/v1/auth/verify-email
+POST /api/v1/auth/resend-verification
+```
+
+### 3.2 User Management Endpoints
+```
+GET    /api/v1/users                    # Get all users (Admin only)
+GET    /api/v1/users/:id               # Get user by ID
+PUT    /api/v1/users/:id               # Update user profile
+DELETE /api/v1/users/:id               # Deactivate user (Admin only)
+GET    /api/v1/users/:id/achievements  # Get user achievements
+GET    /api/v1/users/:id/projects      # Get user's projects
+GET    /api/v1/users/:id/reviews       # Get user's reviews
+PUT    /api/v1/users/:id/avatar        # Upload avatar
+GET    /api/v1/users/search            # Search users by criteria
+```
+
+### 3.3 Project Management Endpoints
+```
+GET    /api/v1/projects                # Get all projects with filters
+POST   /api/v1/projects                # Create new project (Creator/Admin)
+GET    /api/v1/projects/:id            # Get project details
+PUT    /api/v1/projects/:id            # Update project (Creator/Admin)
+DELETE /api/v1/projects/:id            # Delete project (Creator/Admin)
+GET    /api/v1/projects/:id/team       # Get project team
+GET    /api/v1/projects/:id/tasks      # Get project tasks
+GET    /api/v1/projects/:id/sprints    # Get project sprints
+GET    /api/v1/projects/:id/reviews    # Get project reviews
+GET    /api/v1/projects/search         # Search projects
+GET    /api/v1/projects/featured       # Get featured projects
+GET    /api/v1/projects/trending       # Get trending projects
+```
+
+### 3.4 Team Management Endpoints
+```
+GET    /api/v1/teams/:id               # Get team details
+PUT    /api/v1/teams/:id               # Update team
+POST   /api/v1/teams/:id/invite        # Invite user to team
+POST   /api/v1/teams/:id/join          # Join team with invite code
+DELETE /api/v1/teams/:id/members/:userId # Remove team member
+PUT    /api/v1/teams/:id/members/:userId # Update member role
+GET    /api/v1/teams/:id/chat          # Get team chat messages
+POST   /api/v1/teams/:id/chat          # Send chat message
+```
+
+### 3.5 Task Management Endpoints
+```
+GET    /api/v1/tasks                   # Get tasks with filters
+POST   /api/v1/tasks                   # Create new task
+GET    /api/v1/tasks/:id               # Get task details
+PUT    /api/v1/tasks/:id               # Update task
+DELETE /api/v1/tasks/:id               # Delete task
+PUT    /api/v1/tasks/:id/assign        # Assign task to user
+PUT    /api/v1/tasks/:id/status        # Update task status
+GET    /api/v1/tasks/my-tasks          # Get current user's tasks
+```
+
+### 3.6 Sprint Management Endpoints
+```
+GET    /api/v1/sprints/:id             # Get sprint details
+PUT    /api/v1/sprints/:id             # Update sprint
+POST   /api/v1/sprints/:id/start       # Start sprint
+POST   /api/v1/sprints/:id/complete    # Complete sprint
+GET    /api/v1/sprints/:id/tasks       # Get sprint tasks
+GET    /api/v1/sprints/:id/progress    # Get sprint progress
+```
+
+### 3.7 Review System Endpoints
+```
+GET    /api/v1/reviews                 # Get reviews with filters
+POST   /api/v1/reviews                 # Create new review
+GET    /api/v1/reviews/:id             # Get review details
+PUT    /api/v1/reviews/:id             # Update review
+DELETE /api/v1/reviews/:id             # Delete review
+GET    /api/v1/reviews/pending         # Get pending reviews for user
+GET    /api/v1/reviews/completed       # Get completed reviews
+GET    /api/v1/reviews/received        # Get reviews received by user
+POST   /api/v1/reviews/:id/submit      # Submit review
+```
+
+### 3.8 Demo & Showcase Endpoints
+```
+GET    /api/v1/demos                   # Get all demo projects
+POST   /api/v1/demos                   # Submit demo project
+GET    /api/v1/demos/:id               # Get demo details
+PUT    /api/v1/demos/:id               # Update demo
+DELETE /api/v1/demos/:id               # Delete demo
+POST   /api/v1/demos/:id/like          # Like/unlike demo
+POST   /api/v1/demos/:id/view          # Record demo view
+GET    /api/v1/demos/featured          # Get featured demos
+GET    /api/v1/demos/trending          # Get trending demos
+```
+
+### 3.9 AI Copilot Endpoints
+```
+GET    /api/v1/ai/copilots             # Get available AI copilots
+POST   /api/v1/ai/chat                 # Send message to AI copilot
+GET    /api/v1/ai/chat/:chatId         # Get AI chat history
+POST   /api/v1/ai/suggestions          # Get AI suggestions for project
+POST   /api/v1/ai/code-review          # Request AI code review
+POST   /api/v1/ai/design-feedback      # Request AI design feedback
+POST   /api/v1/ai/business-analysis    # Request AI business analysis
+```
+
+### 3.10 Notification Endpoints
+```
+GET    /api/v1/notifications           # Get user notifications
+PUT    /api/v1/notifications/:id/read  # Mark notification as read
+PUT    /api/v1/notifications/read-all  # Mark all as read
+DELETE /api/v1/notifications/:id       # Delete notification
+POST   /api/v1/notifications/subscribe # Subscribe to push notifications
+GET    /api/v1/notifications/settings  # Get notification preferences
+PUT    /api/v1/notifications/settings  # Update notification preferences
+```
+
+### 3.11 Search & Discovery Endpoints
+```
+GET    /api/v1/search/projects         # Search projects
+GET    /api/v1/search/users            # Search users
+GET    /api/v1/search/teams            # Search teams
+GET    /api/v1/search/demos            # Search demo projects
+GET    /api/v1/search/global           # Global search
+GET    /api/v1/recommendations/projects # Get recommended projects
+GET    /api/v1/recommendations/teams   # Get recommended teams
+```
+
+### 3.12 Analytics & Reporting Endpoints
+```
+GET    /api/v1/analytics/dashboard     # Get dashboard analytics
+GET    /api/v1/analytics/projects      # Get project analytics
+GET    /api/v1/analytics/users         # Get user analytics (Admin)
+GET    /api/v1/analytics/engagement    # Get engagement metrics
+GET    /api/v1/reports/projects        # Generate project reports
+GET    /api/v1/reports/teams           # Generate team reports
+GET    /api/v1/reports/users           # Generate user reports (Admin)
+```
+
+### 3.13 File Management Endpoints
+```
+POST   /api/v1/files/upload            # Upload file
+GET    /api/v1/files/:id               # Get file details
+DELETE /api/v1/files/:id               # Delete file
+POST   /api/v1/files/avatar            # Upload avatar
+POST   /api/v1/files/project-assets    # Upload project assets
+POST   /api/v1/files/demo-video        # Upload demo video
+```
+
+### 3.14 Achievement System Endpoints
+```
+GET    /api/v1/achievements             # Get all achievements
+GET    /api/v1/achievements/:id         # Get achievement details
+GET    /api/v1/achievements/user/:userId # Get user achievements
+POST   /api/v1/achievements/check       # Check and award achievements
+GET    /api/v1/leaderboard             # Get XP leaderboard
+GET    /api/v1/leaderboard/:period     # Get leaderboard for period
+```
+
+### 3.15 Application Management Endpoints
+```
+GET    /api/v1/applications             # Get project applications
+POST   /api/v1/applications             # Apply to project
+GET    /api/v1/applications/:id         # Get application details
+PUT    /api/v1/applications/:id         # Update application
+DELETE /api/v1/applications/:id         # Withdraw application
+POST   /api/v1/applications/:id/accept  # Accept application
+POST   /api/v1/applications/:id/reject  # Reject application
+```
+
+## 4. BUSINESS LOGIC REQUIREMENTS
+
+### 4.1 Team Matching Algorithm
+- AI-powered matching based on skills, personality traits, and project requirements
+- Consider user preferences, availability, and past collaboration success
+- Ensure role diversity and balanced team composition
+- Real-time matching with project requirements updates
+
+### 4.2 XP and Leveling System
+- XP awarded for: completing tasks, submitting demos, receiving positive reviews, helping others
+- Level progression: Level = floor(sqrt(XP / 100))
+- Achievement system with different rarities and requirements
+- Weekly/monthly leaderboards with seasonal resets
+
+### 4.3 Review System Rules
+- Anonymous reviews enabled by default
+- Review deadline: 7 days after project completion
+- Minimum 3 reviews required for final project rating
+- Review categories: Technical, Collaboration, Initiative, Reliability, Creativity
+- Peer review XP bonus: +25 XP per completed review
+
+### 4.4 Project Lifecycle Management
+- Automatic sprint creation based on project duration
+- Progress tracking with milestone checkpoints
+- Deadline reminders and escalation system
+- Auto-completion triggers and final demo submission requirements
+
+### 4.5 AI Copilot Integration
+- Role-specific AI assistants with different capabilities
+- Context-aware suggestions based on project phase and user role
+- Integration with external APIs (GitHub, Figma, etc.)
+- Learning from user interactions and project outcomes
+
+### 4.6 Notification System Rules
+- Real-time notifications for critical events
+- Digest notifications for non-urgent updates
+- User-configurable notification preferences
+- Mobile push notification support
+
+## 5. INTEGRATION REQUIREMENTS
+
+### 5.1 External Service Integrations
+- **GitHub API**: Repository management, code review
+- **Figma API**: Design collaboration and sharing
+- **Google Drive API**: File storage and sharing
+- **Zoom API**: Video conferencing integration
+- **Slack API**: External team communication
+- **Email Service**: Transactional emails (SendGrid/Mailgun)
+- **File Storage**: AWS S3 or similar for file uploads
+- **Video Hosting**: Vimeo/YouTube API for demo videos
+
+### 5.2 AI/ML Service Requirements
+- **OpenAI GPT-4**: For AI copilot conversations
+- **Recommendation Engine**: For team and project matching
+- **Natural Language Processing**: For project description analysis
+- **Sentiment Analysis**: For review and feedback processing
+- **Code Analysis Tools**: For automatic code quality assessment
+
+### 5.3 Real-time Communication
+- **WebSocket Support**: For real-time chat and notifications
+- **Message Queuing**: Redis or RabbitMQ for scalable messaging
+- **Push Notifications**: Firebase Cloud Messaging or similar
+- **Email Notifications**: Template-based system with preferences
+
+## 6. SECURITY & COMPLIANCE REQUIREMENTS
+
+### 6.1 Authentication & Authorization
+- JWT-based authentication with refresh tokens
+- Role-based access control (RBAC)
+- OAuth2 integration for social logins
+- Multi-factor authentication support
+- Session management and timeout policies
+
+### 6.2 Data Protection
+- GDPR compliance for EU users
+- Data encryption at rest and in transit
+- Personal data anonymization for reviews
+- Right to be forgotten implementation
+- Data export capabilities for users
+
+### 6.3 Content Moderation
+- Automated content filtering for inappropriate content
+- Manual review process for reported content
+- User reporting and blocking system
+- Community guidelines enforcement
+
+## 7. PERFORMANCE & SCALABILITY REQUIREMENTS
+
+### 7.1 Performance Targets
+- API response times < 200ms for 95% of requests
+- Real-time message delivery < 100ms
+- File upload support up to 100MB
+- Video streaming support for demo presentations
+- Mobile-responsive performance optimization
+
+### 7.2 Scalability Requirements
+- Support for 10,000+ concurrent users
+- Horizontal scaling capabilities
+- Database optimization for complex queries
+- CDN integration for static assets
+- Caching strategy for frequently accessed data
+
+## 8. MONITORING & ANALYTICS REQUIREMENTS
+
+### 8.1 System Monitoring
+- Application performance monitoring (APM)
+- Error tracking and alerting
+- Database performance monitoring
+- Infrastructure monitoring and alerting
+- Uptime monitoring with SLA tracking
+
+### 8.2 Business Analytics
+- User engagement metrics
+- Project completion rates
+- Team formation success rates
+- Feature usage analytics
+- A/B testing framework for new features
+- Custom dashboard for administrators
+
+## 9. DATABASE RELATIONSHIPS & CONSTRAINTS
+
+### 9.1 One-to-Many Relationships
+```sql
+-- User relationships
+User (1) -> Project (Many)         // User.id = Project.createdBy
+User (1) -> Review (Many)          // User.id = Review.reviewerId
+User (1) -> Review (Many)          // User.id = Review.revieweeId  
+User (1) -> Notification (Many)    // User.id = Notification.userId
+User (1) -> ChatMessage (Many)     // User.id = ChatMessage.senderId
+User (1) -> UserAchievement (Many) // User.id = UserAchievement.userId
+User (1) -> Like (Many)            // User.id = Like.userId
+User (1) -> ProjectApplication (Many) // User.id = ProjectApplication.userId
+User (1) -> Task (Many)            // User.id = Task.assigneeId
+User (1) -> Task (Many)            // User.id = Task.createdBy
+User (1) -> TeamMember (Many)      // User.id = TeamMember.userId
+
+-- Project relationships
+Project (1) -> Team (Many)         // Project.id = Team.projectId
+Project (1) -> Sprint (Many)       // Project.id = Sprint.projectId
+Project (1) -> Task (Many)         // Project.id = Task.projectId
+Project (1) -> Review (Many)       // Project.id = Review.projectId
+Project (1) -> DemoProject (Many)  // Project.id = DemoProject.projectId
+Project (1) -> Chat (Many)         // Project.id = Chat.projectId
+Project (1) -> ProjectApplication (Many) // Project.id = ProjectApplication.projectId
+
+-- Team relationships
+Team (1) -> TeamMember (Many)      // Team.id = TeamMember.teamId
+Team (1) -> Chat (Many)            // Team.id = Chat.teamId
+
+-- Sprint relationships
+Sprint (1) -> Task (Many)          // Sprint.id = Task.sprintId
+
+-- Chat relationships
+Chat (1) -> ChatMessage (Many)     // Chat.id = ChatMessage.chatId
+
+-- Achievement relationships
+Achievement (1) -> UserAchievement (Many) // Achievement.id = UserAchievement.achievementId
+```
+
+### 9.2 Many-to-Many Relationships
+```sql
+-- User <-> Project (through TeamMember)
+User ↔ Project
+  via: TeamMember (userId, teamId) + Team (projectId)
+  
+-- User <-> Team (through TeamMember)
+User ↔ Team
+  via: TeamMember (userId, teamId)
+
+-- Task <-> Task (dependencies)
+Task ↔ Task
+  via: Task.dependencies (Array[UUID])
+  self-referential many-to-many
+```
+
+### 9.3 Self-Referencing Relationships
+```sql
+-- Chat Message replies
+ChatMessage (1) -> ChatMessage (Many)  // ChatMessage.id = ChatMessage.replyToId
+
+-- Task dependencies  
+Task (1) -> Task (Many)                 // Task.id in Task.dependencies[]
+
+-- Team leadership
+User (1) -> Team (Many)                 // User.id = Team.teamLead
+```
+
+### 9.4 Polymorphic Relationships
+```sql
+-- Likes system (polymorphic)
+Like.targetType = 'demo_project' -> DemoProject.id = Like.targetId
+Like.targetType = 'chat_message' -> ChatMessage.id = Like.targetId
+Like.targetType = 'comment' -> Comment.id = Like.targetId (future entity)
+```
+
+### 9.5 Database Indexes (Recommended)
+```sql
+-- Performance critical indexes
+CREATE INDEX idx_user_email ON User(email);
+CREATE INDEX idx_user_role ON User(role);
+CREATE INDEX idx_user_preferred_role ON User(preferredRole);
+CREATE INDEX idx_user_active ON User(isActive);
+
+CREATE INDEX idx_project_status ON Project(status);
+CREATE INDEX idx_project_created_by ON Project(createdBy);
+CREATE INDEX idx_project_deadline ON Project(deadline);
+CREATE INDEX idx_project_featured ON Project(isFeatured);
+CREATE INDEX idx_project_tags ON Project USING GIN(tags);
+
+CREATE INDEX idx_team_project_id ON Team(projectId);
+CREATE INDEX idx_team_lead ON Team(teamLead);
+
+CREATE INDEX idx_team_member_team_id ON TeamMember(teamId);
+CREATE INDEX idx_team_member_user_id ON TeamMember(userId);
+CREATE INDEX idx_team_member_active ON TeamMember(isActive);
+
+CREATE INDEX idx_sprint_project_id ON Sprint(projectId);
+CREATE INDEX idx_sprint_status ON Sprint(status);
+CREATE INDEX idx_sprint_dates ON Sprint(startDate, endDate);
+
+CREATE INDEX idx_task_sprint_id ON Task(sprintId);
+CREATE INDEX idx_task_project_id ON Task(projectId);
+CREATE INDEX idx_task_assignee_id ON Task(assigneeId);
+CREATE INDEX idx_task_status ON Task(status);
+CREATE INDEX idx_task_created_by ON Task(createdBy);
+
+CREATE INDEX idx_review_project_id ON Review(projectId);
+CREATE INDEX idx_review_reviewer_id ON Review(reviewerId);
+CREATE INDEX idx_review_reviewee_id ON Review(revieweeId);
+CREATE INDEX idx_review_status ON Review(status);
+
+CREATE INDEX idx_notification_user_id ON Notification(userId);
+CREATE INDEX idx_notification_read ON Notification(isRead);
+CREATE INDEX idx_notification_type ON Notification(type);
+CREATE INDEX idx_notification_created ON Notification(createdAt);
+
+CREATE INDEX idx_chat_team_id ON Chat(teamId);
+CREATE INDEX idx_chat_project_id ON Chat(projectId);
+
+CREATE INDEX idx_chat_message_chat_id ON ChatMessage(chatId);
+CREATE INDEX idx_chat_message_sender_id ON ChatMessage(senderId);
+CREATE INDEX idx_chat_message_created ON ChatMessage(createdAt);
+
+CREATE INDEX idx_demo_project_id ON DemoProject(projectId);
+CREATE INDEX idx_demo_featured ON DemoProject(isFeatured);
+CREATE INDEX idx_demo_likes ON DemoProject(likes);
+CREATE INDEX idx_demo_submitted ON DemoProject(submittedAt);
+
+CREATE INDEX idx_like_user_id ON Like(userId);
+CREATE INDEX idx_like_target ON Like(targetType, targetId);
+
+CREATE INDEX idx_application_project_id ON ProjectApplication(projectId);
+CREATE INDEX idx_application_user_id ON ProjectApplication(userId);
+CREATE INDEX idx_application_status ON ProjectApplication(status);
+
+CREATE INDEX idx_user_achievement_user_id ON UserAchievement(userId);
+CREATE INDEX idx_user_achievement_achievement_id ON UserAchievement(achievementId);
+```
+
+### 9.6 Database Constraints
+```sql
+-- Unique constraints
+ALTER TABLE User ADD CONSTRAINT uk_user_email UNIQUE (email);
+ALTER TABLE Team ADD CONSTRAINT uk_team_invite_code UNIQUE (inviteCode);
+
+-- Check constraints
+ALTER TABLE Project ADD CONSTRAINT chk_project_progress 
+  CHECK (progress >= 0.0 AND progress <= 1.0);
+  
+ALTER TABLE TeamMember ADD CONSTRAINT chk_team_member_progress 
+  CHECK (progress >= 0.0 AND progress <= 1.0);
+  
+ALTER TABLE Review ADD CONSTRAINT chk_review_ratings 
+  CHECK (
+    ratings->>'technical' BETWEEN '1' AND '5' AND
+    ratings->>'collaboration' BETWEEN '1' AND '5' AND
+    ratings->>'initiative' BETWEEN '1' AND '5' AND
+    ratings->>'reliability' BETWEEN '1' AND '5' AND
+    ratings->>'creativity' BETWEEN '1' AND '5'
+  );
+
+ALTER TABLE User ADD CONSTRAINT chk_user_xp CHECK (xp >= 0);
+ALTER TABLE User ADD CONSTRAINT chk_user_level CHECK (level >= 1);
+
+-- Foreign key constraints with cascade actions
+ALTER TABLE Project ADD CONSTRAINT fk_project_created_by 
+  FOREIGN KEY (createdBy) REFERENCES User(id) ON DELETE SET NULL;
+
+ALTER TABLE Team ADD CONSTRAINT fk_team_project_id 
+  FOREIGN KEY (projectId) REFERENCES Project(id) ON DELETE CASCADE;
+
+ALTER TABLE Team ADD CONSTRAINT fk_team_lead 
+  FOREIGN KEY (teamLead) REFERENCES User(id) ON DELETE SET NULL;
+
+ALTER TABLE TeamMember ADD CONSTRAINT fk_team_member_team_id 
+  FOREIGN KEY (teamId) REFERENCES Team(id) ON DELETE CASCADE;
+
+ALTER TABLE TeamMember ADD CONSTRAINT fk_team_member_user_id 
+  FOREIGN KEY (userId) REFERENCES User(id) ON DELETE CASCADE;
+
+ALTER TABLE Sprint ADD CONSTRAINT fk_sprint_project_id 
+  FOREIGN KEY (projectId) REFERENCES Project(id) ON DELETE CASCADE;
+
+ALTER TABLE Task ADD CONSTRAINT fk_task_sprint_id 
+  FOREIGN KEY (sprintId) REFERENCES Sprint(id) ON DELETE CASCADE;
+
+ALTER TABLE Task ADD CONSTRAINT fk_task_project_id 
+  FOREIGN KEY (projectId) REFERENCES Project(id) ON DELETE CASCADE;
+
+ALTER TABLE Task ADD CONSTRAINT fk_task_assignee_id 
+  FOREIGN KEY (assigneeId) REFERENCES User(id) ON DELETE SET NULL;
+
+ALTER TABLE Review ADD CONSTRAINT fk_review_project_id 
+  FOREIGN KEY (projectId) REFERENCES Project(id) ON DELETE CASCADE;
+
+ALTER TABLE Review ADD CONSTRAINT fk_review_reviewer_id 
+  FOREIGN KEY (reviewerId) REFERENCES User(id) ON DELETE CASCADE;
+
+ALTER TABLE Review ADD CONSTRAINT fk_review_reviewee_id 
+  FOREIGN KEY (revieweeId) REFERENCES User(id) ON DELETE CASCADE;
+
+-- Prevent self-review
+ALTER TABLE Review ADD CONSTRAINT chk_review_no_self_review 
+  CHECK (reviewerId != revieweeId);
+
+-- Ensure team member uniqueness per team
+ALTER TABLE TeamMember ADD CONSTRAINT uk_team_member_user 
+  UNIQUE (teamId, userId);
+```
+
+### 9.7 Database Views (Recommended)
+```sql
+-- User statistics view
+CREATE VIEW user_stats AS
+SELECT 
+  u.id,
+  u.firstName,
+  u.lastName,
+  u.xp,
+  u.level,
+  COUNT(DISTINCT tm.teamId) as teams_joined,
+  COUNT(DISTINCT p.id) as projects_created,
+  COUNT(DISTINCT r.id) as reviews_given,
+  COUNT(DISTINCT r2.id) as reviews_received,
+  AVG(CASE 
+    WHEN r2.ratings->>'technical' ~ '^[0-9]+$' 
+    THEN (r2.ratings->>'technical')::int 
+    ELSE NULL 
+  END) as avg_technical_rating
+FROM User u
+LEFT JOIN TeamMember tm ON u.id = tm.userId
+LEFT JOIN Project p ON u.id = p.createdBy
+LEFT JOIN Review r ON u.id = r.reviewerId AND r.status = 'completed'
+LEFT JOIN Review r2 ON u.id = r2.revieweeId AND r2.status = 'completed'
+WHERE u.isActive = true
+GROUP BY u.id, u.firstName, u.lastName, u.xp, u.level;
+
+-- Project summary view
+CREATE VIEW project_summary AS
+SELECT 
+  p.id,
+  p.title,
+  p.status,
+  p.progress,
+  p.deadline,
+  COUNT(DISTINCT tm.userId) as team_size,
+  COUNT(DISTINCT s.id) as total_sprints,
+  COUNT(DISTINCT t.id) as total_tasks,
+  COUNT(DISTINCT CASE WHEN t.status = 'completed' THEN t.id END) as completed_tasks
+FROM Project p
+LEFT JOIN Team team ON p.id = team.projectId
+LEFT JOIN TeamMember tm ON team.id = tm.teamId AND tm.isActive = true
+LEFT JOIN Sprint s ON p.id = s.projectId
+LEFT JOIN Task t ON p.id = t.projectId
+GROUP BY p.id, p.title, p.status, p.progress, p.deadline;
+
+-- Active team communication view
+CREATE VIEW team_activity AS
+SELECT 
+  t.id as team_id,
+  t.name as team_name,
+  p.title as project_title,
+  COUNT(DISTINCT tm.userId) as member_count,
+  COUNT(DISTINCT cm.id) as message_count,
+  MAX(cm.createdAt) as last_activity
+FROM Team t
+JOIN Project p ON t.projectId = p.id
+LEFT JOIN TeamMember tm ON t.id = tm.teamId AND tm.isActive = true
+LEFT JOIN Chat c ON t.id = c.teamId
+LEFT JOIN ChatMessage cm ON c.id = cm.chatId
+WHERE p.status = 'in-progress'
+GROUP BY t.id, t.name, p.title;
+```
+
+This BRD provides a comprehensive foundation for backend development, covering all entities, relationships, and API endpoints needed to support the CrossLab platform's functionality. 
