@@ -22,7 +22,7 @@ import { users, demoProjects } from '../data/mockData'
 import { getAvatarFallback, formatDate } from '../lib/utils'
 
 export function Profile() {
-  const currentUser = users[0] // Mock current user
+  const currentUser = users[0]
   const userProjects = demoProjects.filter(project => 
     project.teamMembers.includes(currentUser.name)
   )
