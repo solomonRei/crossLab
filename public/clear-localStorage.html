@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear LocalStorage</title>
+</head>
+<body>
+    <h1>Clearing localStorage...</h1>
+    <script>
+        // Clear localStorage completely
+        localStorage.clear();
+        
+        // Also clear sessionStorage
+        sessionStorage.clear();
+        
+        // Show what was cleared
+        console.log('localStorage and sessionStorage cleared!');
+        document.body.innerHTML += '<p>✅ localStorage and sessionStorage cleared!</p>';
+        document.body.innerHTML += '<p>Please refresh your main application and check the network tab again.</p>';
+        document.body.innerHTML += '<p><a href="/">Go back to main app</a></p>';
+    </script>
+</body>
+</html> 

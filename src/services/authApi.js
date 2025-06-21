@@ -3,12 +3,12 @@ import { logApiRequest, logError, devLog } from "../config/devTools";
 // API Configuration
 const API_CONFIG = {
   https: {
-    baseUrl: process.env.REACT_APP_API_URL || "https://192.168.0.56:7001",
+    baseUrl: process.env.REACT_APP_API_URL || "https://192.168.0.47:7001",
     mode: "https",
     port: 7001,
   },
   http: {
-    baseUrl: process.env.REACT_APP_API_URL_HTTP || "http://192.168.0.56:5059",
+    baseUrl: process.env.REACT_APP_API_URL_HTTP || "http://192.168.0.47:5059",
     mode: "http",
     port: 5059,
   },
