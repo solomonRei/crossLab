@@ -8,10 +8,13 @@ import { DashboardLayout } from './layouts/DashboardLayout'
 
 // Pages
 import { Home } from './pages/Home'
+import { About } from './pages/About'
 import { Projects } from './pages/Projects'
+import { Showcase } from './pages/Showcase'
 import { Auth } from './pages/Auth'
 import { Profile } from './pages/Profile'
 import { Review } from './pages/Review'
+import { NotificationSettings } from './pages/NotificationSettings'
 
 // Protected Route component
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -29,7 +32,7 @@ function App() {
             {/* Public routes */}
             <Route path="/" element={<PublicLayout />}>
               <Route index element={<Home />} />
-              <Route path="projects" element={<Projects />} />
+              <Route path="about" element={<About />} />
               <Route path="auth" element={<Auth />} />
             </Route>
 
@@ -42,10 +45,63 @@ function App() {
                 </ProtectedRoute>
               }
             >
+              <Route index element={<Projects />} />
+            </Route>
+
+            {/* Protected individual routes */}
+            <Route
+              path="/projects"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Projects />} />
+            </Route>
+
+            <Route
+              path="/showcase"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Showcase />} />
+            </Route>
+
+            <Route
+              path="/reviews"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Review />} />
+            </Route>
+
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route index element={<Profile />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="review" element={<Review />} />
-              <Route path="projects" element={<Projects />} />
+            </Route>
+
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="notifications" element={<NotificationSettings />} />
             </Route>
           </Routes>
 
