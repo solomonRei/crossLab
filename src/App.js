@@ -17,6 +17,7 @@ import { Review } from "./pages/Review";
 import { NotificationSettings } from "./pages/NotificationSettings";
 import { ProjectView } from "./pages/ProjectView";
 import { ProjectCreate } from "./pages/ProjectCreate";
+import { DemoPage } from "./pages/DemoPage";
 
 // Protected Route component
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -86,6 +87,17 @@ function App() {
                 }
               >
                 <Route index element={<Review />} />
+              </Route>
+
+              <Route
+                path="/demo"
+                element={
+                  <ProtectedRoute>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<DemoPage />} />
               </Route>
 
               <Route

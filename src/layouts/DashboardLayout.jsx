@@ -13,7 +13,8 @@ import {
   Sun,
   Menu,
   X,
-  LogOut
+  LogOut,
+  Video
 } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { Avatar, AvatarImage, AvatarFallback } from '../components/ui/Avatar'
@@ -27,6 +28,7 @@ import { getAvatarFallback } from '../lib/utils'
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "Projects", href: "/projects", icon: FolderOpen },
+  { name: "Demo", href: "/demo", icon: Video },
   { name: "Showcase", href: "/showcase", icon: Trophy },
   { name: "Reviews", href: "/reviews", icon: FileCheck },
   { name: "Profile", href: "/profile", icon: User },
