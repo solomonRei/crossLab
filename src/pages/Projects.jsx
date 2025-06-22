@@ -24,11 +24,14 @@ import {
   Megaphone,
   CodeXml,
   BarChartBig,
+  UserPlus
 } from "lucide-react";
 import { authApiService } from "../services/authApi";
 import { roleTypes } from "../data/mockData";
 import { formatDate, formatProgress } from "../lib/utils";
 import { useAuth } from "../contexts/AuthContext";
+import { JoinProjectRequest } from "../components/project/JoinProjectRequest";
+import { useToast } from "../components/ui/Toast";
 
 const difficultyColors = {
   Easy: "bg-green-500",
@@ -80,15 +83,61 @@ const getDifficultyString = (difficulty) => {
 
 export function Projects() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userProjects, setUserProjects] = useState(new Set());
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [showJoinRequest, setShowJoinRequest] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [hideMyProjects, setHideMyProjects] = useState(false);
+
+  // Load user's project memberships
+  useEffect(() => {
+    if (user?.id) {
+      loadUserProjects();
+    }
+  }, [user?.id]);
+
+  const loadUserProjects = async () => {
+    try {
+      // This would need to be implemented in the API - get projects where user is a member
+      // For now, we'll check each project individually when needed
+      const userProjectIds = new Set();
+      
+      // Get projects created by user
+      const createdProjects = projects.filter(p => p.createdBy === user?.id);
+      createdProjects.forEach(p => userProjectIds.add(p.id));
+      
+      setUserProjects(userProjectIds);
+    } catch (error) {
+      console.error('Error loading user projects:', error);
+    }
+  };
+
+  const handleJoinProject = (project) => {
+    setSelectedProject(project);
+    setShowJoinRequest(true);
+  };
+
+  const handleJoinRequestSent = () => {
+    toast.success('Request Sent', 'Your join request has been sent to the project creator');
+    setShowJoinRequest(false);
+    setSelectedProject(null);
+  };
+
+  const isUserMember = (project) => {
+    // Check if user is creator
+    if (project.createdBy === user?.id) return true;
+    
+    // Check if user is in userProjects set
+    return userProjects.has(project.id);
+  };
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -413,6 +462,17 @@ export function Projects() {
                         View Details
                       </Button>
                     </Link>
+                    
+                    {/* Join Project Button for non-members */}
+                    {user && !isUserMember(project) && statusString === "recruiting" && (
+                      <Button 
+                        onClick={() => handleJoinProject(project)}
+                        className="w-full mt-2"
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Request to Join
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -420,6 +480,14 @@ export function Projects() {
           })}
         </div>
       )}
+
+      {/* Join Project Request Modal */}
+      <JoinProjectRequest
+        project={selectedProject}
+        isOpen={showJoinRequest}
+        onClose={() => setShowJoinRequest(false)}
+        onRequestSent={handleJoinRequestSent}
+      />
     </div>
   );
 }

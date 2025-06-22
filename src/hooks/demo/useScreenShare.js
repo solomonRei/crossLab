@@ -9,82 +9,6 @@ export const useScreenShare = () => {
   const screenVideoRef = useRef(null);
   const { toast } = useToast();
 
-  // Start screen sharing
-  const startScreenShare = useCallback(async (options = {}) => {
-    try {
-      setError(null);
-      
-      // Check if screen sharing is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-        throw new Error('Screen sharing is not supported in this browser');
-      }
-
-      const constraints = {
-        video: {
-          cursor: 'always',
-          displaySurface: 'monitor',
-          ...options.video
-        },
-        audio: options.includeAudio || false
-      };
-
-      const stream = await navigator.mediaDevices.getDisplayMedia(constraints);
-      
-      setScreenStream(stream);
-      setIsScreenSharing(true);
-      
-      if (screenVideoRef.current) {
-        screenVideoRef.current.srcObject = stream;
-      }
-
-      // Handle when user stops sharing via browser UI
-      stream.getVideoTracks()[0].addEventListener('ended', () => {
-        stopScreenShare();
-      });
-
-      toast.success('Screen Sharing Started', 'Screen sharing is now active');
-      return stream;
-      
-    } catch (err) {
-      console.error('Error starting screen share:', err);
-      
-      let errorMessage = 'Failed to start screen sharing';
-      if (err.name === 'NotAllowedError') {
-        errorMessage = 'Screen sharing permission denied';
-      } else if (err.name === 'NotSupportedError') {
-        errorMessage = 'Screen sharing is not supported in this browser';
-      }
-      
-      setError(errorMessage);
-      toast.error('Screen Share Error', errorMessage);
-      return null;
-    }
-  }, [toast]);
-
-  // Stop screen sharing
-  const stopScreenShare = useCallback(() => {
-    if (screenStream) {
-      screenStream.getTracks().forEach(track => track.stop());
-      setScreenStream(null);
-    }
-    
-    if (screenVideoRef.current) {
-      screenVideoRef.current.srcObject = null;
-    }
-    
-    setIsScreenSharing(false);
-    toast.info('Screen Sharing Stopped', 'Screen sharing has ended');
-  }, [screenStream, toast]);
-
-  // Toggle screen sharing
-  const toggleScreenShare = useCallback(async (options = {}) => {
-    if (isScreenSharing) {
-      stopScreenShare();
-    } else {
-      await startScreenShare(options);
-    }
-  }, [isScreenSharing, stopScreenShare, startScreenShare]);
-
   // Get screen sharing constraints based on quality
   const getScreenShareConstraints = useCallback((quality = 'HD', includeAudio = false) => {
     const constraints = {
@@ -139,6 +63,93 @@ export const useScreenShare = () => {
 
     return constraints;
   }, []);
+
+  // Start screen sharing
+  const startScreenShare = useCallback(async (options = {}) => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        throw new Error('Screen sharing not supported in this browser');
+      }
+
+      const constraints = getScreenShareConstraints(options.quality, options.includeAudio);
+      console.log('Starting screen share with constraints:', constraints);
+      
+      const stream = await navigator.mediaDevices.getDisplayMedia(constraints);
+      
+      // Add event listeners for screen share disconnection
+      stream.getTracks().forEach(track => {
+        track.addEventListener('ended', () => {
+          console.warn('Screen share track ended unexpectedly');
+          setScreenStream(null);
+          setIsScreenSharing(false);
+          
+          if (screenVideoRef.current) {
+            screenVideoRef.current.srcObject = null;
+          }
+          
+          console.log('Screen sharing stopped automatically');
+        });
+
+        track.addEventListener('mute', () => {
+          console.warn('Screen share track muted');
+        });
+
+        track.addEventListener('unmute', () => {
+          console.log('Screen share track unmuted');
+        });
+      });
+      
+      setScreenStream(stream);
+      setIsScreenSharing(true);
+      
+      if (screenVideoRef.current) {
+        screenVideoRef.current.srcObject = stream;
+      }
+      
+      console.log('Screen sharing started successfully');
+      return stream;
+    } catch (error) {
+      console.error('Error starting screen share:', error);
+      
+      let userMessage = 'Failed to start screen sharing';
+      if (error.name === 'NotAllowedError') {
+        userMessage = 'Screen sharing permission denied';
+      } else if (error.name === 'NotFoundError') {
+        userMessage = 'No screen available for sharing';
+      } else if (error.name === 'NotReadableError') {
+        userMessage = 'Screen is being used by another application';
+      } else if (error.name === 'AbortError') {
+        userMessage = 'Screen sharing was cancelled';
+      }
+      
+      setError(userMessage);
+      throw error;
+    }
+  }, [getScreenShareConstraints, screenVideoRef]);
+
+  // Stop screen sharing
+  const stopScreenShare = useCallback(() => {
+    if (screenStream) {
+      screenStream.getTracks().forEach(track => track.stop());
+      setScreenStream(null);
+    }
+    
+    if (screenVideoRef.current) {
+      screenVideoRef.current.srcObject = null;
+    }
+    
+    setIsScreenSharing(false);
+    toast.info('Screen Sharing Stopped', 'Screen sharing has ended');
+  }, [screenStream, toast]);
+
+  // Toggle screen sharing
+  const toggleScreenShare = useCallback(async (options = {}) => {
+    if (isScreenSharing) {
+      stopScreenShare();
+    } else {
+      await startScreenShare(options);
+    }
+  }, [isScreenSharing, stopScreenShare, startScreenShare]);
 
   // Check if screen sharing is supported
   const isScreenShareSupported = useCallback(() => {

@@ -47,6 +47,43 @@ class AuthApiService {
     // Make service globally available for debugging
     if (process.env.NODE_ENV === "development") {
       window.__CROSSLAB_AUTH_SERVICE__ = this;
+      
+      // Add global debug functions
+      window.__DEBUG_DEMO_ROOM__ = async (sessionId) => {
+        console.log('=== GLOBAL DEBUG: Demo Room Operations ===');
+        console.log('Session ID:', sessionId);
+        
+        if (!sessionId) {
+          console.error('Please provide a sessionId: __DEBUG_DEMO_ROOM__("your-session-id")');
+          return;
+        }
+        
+        try {
+          // Test room status
+          console.log('1. Testing room status...');
+          const status = await this.getDemoRoomStatus(sessionId);
+          console.log('Room status:', status);
+          
+          // Test room creation
+          console.log('2. Testing room creation...');
+          const createResult = await this.createDemoRoom(sessionId, { recordingQuality: 'HD' });
+          console.log('Room creation:', createResult);
+          
+          // Test room status again
+          console.log('3. Testing room status after creation...');
+          const status2 = await this.getDemoRoomStatus(sessionId);
+          console.log('Room status after creation:', status2);
+          
+          return { status, createResult, status2 };
+        } catch (error) {
+          console.error('Debug error:', error);
+          return { error: error.message };
+        }
+      };
+      
+      console.log('Debug functions available:');
+      console.log('- __CROSSLAB_AUTH_SERVICE__: Full API service');
+      console.log('- __DEBUG_DEMO_ROOM__(sessionId): Test room operations');
     }
   }
 
@@ -321,6 +358,10 @@ class AuthApiService {
         isProjectLead: member.isProjectLead,
         joinedAt: member.joinedAt,
         progress: member.progress,
+        invitedBy: member.invitedBy,
+        invitedByName: member.invitedByName,
+        invitedAt: member.invitedAt,
+        acceptedAt: member.acceptedAt,
         _memberData: member
       }));
       
@@ -335,6 +376,127 @@ class AuthApiService {
         data: [],
         message: error.message
       };
+    }
+  }
+
+  // Invite user to project (for creators/admins)
+  async inviteToProject(projectId, inviteData) {
+    devLog(`Inviting user to project: ${projectId}`, inviteData);
+    try {
+      const response = await this.request(`/projects/${projectId}/invite`, {
+        method: 'POST',
+        body: JSON.stringify(inviteData)
+      });
+      return response;
+    } catch (error) {
+      devLog('Error inviting user to project:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Request to join project (for regular users)
+  async requestToJoinProject(projectId, requestData) {
+    devLog(`Requesting to join project: ${projectId}`, requestData);
+    try {
+      const response = await this.request(`/projects/${projectId}/members/join`, {
+        method: 'POST',
+        body: JSON.stringify(requestData)
+      });
+      return response;
+    } catch (error) {
+      devLog('Error requesting to join project:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Get pending join requests for a project (for creators/admins)
+  async getProjectJoinRequests(projectId) {
+    devLog(`Fetching join requests for project: ${projectId}`);
+    try {
+      const response = await this.request(`/projects/${projectId}/join-requests`);
+      return response;
+    } catch (error) {
+      devLog('Error fetching join requests:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Approve join request (for creators/admins)
+  async approveJoinRequest(projectId, requestId, approvalData = {}) {
+    devLog(`Approving join request: ${requestId} for project: ${projectId}`, approvalData);
+    try {
+      const response = await this.request(`/projects/${projectId}/join-requests/${requestId}/approve`, {
+        method: 'POST',
+        body: JSON.stringify(approvalData)
+      });
+      return response;
+    } catch (error) {
+      devLog('Error approving join request:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Reject join request (for creators/admins)
+  async rejectJoinRequest(projectId, requestId, rejectionData = {}) {
+    devLog(`Rejecting join request: ${requestId} for project: ${projectId}`, rejectionData);
+    try {
+      const response = await this.request(`/projects/${projectId}/join-requests/${requestId}/reject`, {
+        method: 'POST',
+        body: JSON.stringify(rejectionData)
+      });
+      return response;
+    } catch (error) {
+      devLog('Error rejecting join request:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Remove member from project (for creators/admins)
+  async removeProjectMember(projectId, userId) {
+    devLog(`Removing member ${userId} from project: ${projectId}`);
+    try {
+      const response = await this.request(`/projects/${projectId}/members/${userId}`, {
+        method: 'DELETE'
+      });
+      return response;
+    } catch (error) {
+      devLog('Error removing project member:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Update member role in project (for creators/admins)
+  async updateProjectMemberRole(projectId, userId, roleData) {
+    devLog(`Updating role for member ${userId} in project: ${projectId}`, roleData);
+    try {
+      const response = await this.request(`/projects/${projectId}/members/${userId}`, {
+        method: 'PUT',
+        body: JSON.stringify(roleData)
+      });
+      return response;
+    } catch (error) {
+      devLog('Error updating member role:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Search users for invitation (with filters)
+  async searchUsers(query, filters = {}) {
+    devLog(`Searching users with query: ${query}`, filters);
+    try {
+      const queryParams = new URLSearchParams();
+      if (query) queryParams.append('search', query);
+      if (filters.role) queryParams.append('role', filters.role);
+      if (filters.excludeProjectId) queryParams.append('excludeProjectId', filters.excludeProjectId);
+      
+      const queryString = queryParams.toString();
+      const url = `/users/search${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await this.request(url);
+      return response;
+    } catch (error) {
+      devLog('Error searching users:', error);
+      return { success: false, message: error.message };
     }
   }
 
@@ -1146,7 +1308,7 @@ class AuthApiService {
   // Create demo session
   async createDemoSession(sessionData) {
     try {
-      const response = await this.request('/api/v1/Demo/sessions', {
+      const response = await this.request('/Demo/sessions', {
         method: 'POST',
         body: JSON.stringify(sessionData)
       });
@@ -1163,7 +1325,7 @@ class AuthApiService {
       const queryParams = new URLSearchParams();
       if (filters.status) queryParams.append('status', filters.status);
       
-      const url = `/api/v1/Demo/sessions${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      const url = `/Demo/sessions${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
       const response = await this.request(url);
       return response;
     } catch (error) {
@@ -1175,7 +1337,7 @@ class AuthApiService {
   // Get demo session by ID
   async getDemoSession(sessionId) {
     try {
-      const response = await this.request(`/api/v1/Demo/sessions/${sessionId}`);
+      const response = await this.request(`/Demo/sessions/${sessionId}`);
       return response;
     } catch (error) {
       console.error('Get demo session error:', error);
@@ -1186,7 +1348,7 @@ class AuthApiService {
   // Start demo session
   async startDemoSession(sessionId) {
     try {
-      const response = await this.request(`/api/v1/Demo/sessions/${sessionId}/start`, {
+      const response = await this.request(`/Demo/sessions/${sessionId}/start`, {
         method: 'POST'
       });
       return response;
@@ -1199,7 +1361,7 @@ class AuthApiService {
   // End demo session
   async endDemoSession(sessionId) {
     try {
-      const response = await this.request(`/api/v1/Demo/sessions/${sessionId}/end`, {
+      const response = await this.request(`/Demo/sessions/${sessionId}/end`, {
         method: 'POST'
       });
       return response;
@@ -1212,7 +1374,7 @@ class AuthApiService {
   // Invite participants to demo session
   async inviteDemoParticipants(sessionId, inviteData) {
     try {
-      const response = await this.request(`/api/v1/Demo/sessions/${sessionId}/invite`, {
+      const response = await this.request(`/Demo/sessions/${sessionId}/invite`, {
         method: 'POST',
         body: JSON.stringify(inviteData)
       });
@@ -1226,7 +1388,7 @@ class AuthApiService {
   // Start recording
   async startDemoRecording(sessionId, recordingData) {
     try {
-      const response = await this.request(`/api/v1/Demo/sessions/${sessionId}/recording/start`, {
+      const response = await this.request(`/Demo/sessions/${sessionId}/recording/start`, {
         method: 'POST',
         body: JSON.stringify(recordingData)
       });
@@ -1240,7 +1402,7 @@ class AuthApiService {
   // Stop recording
   async stopDemoRecording(sessionId) {
     try {
-      const response = await this.request(`/api/v1/Demo/sessions/${sessionId}/recording/stop`, {
+      const response = await this.request(`/Demo/sessions/${sessionId}/recording/stop`, {
         method: 'POST'
       });
       return response;
@@ -1253,10 +1415,203 @@ class AuthApiService {
   // Get demo recordings
   async getDemoRecordings(sessionId) {
     try {
-      const response = await this.request(`/api/v1/Demo/sessions/${sessionId}/recordings`);
+      const response = await this.request(`/Demo/sessions/${sessionId}/recordings`);
       return response;
     } catch (error) {
       console.error('Get demo recordings error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Upload demo recording
+  async uploadDemoRecording(sessionId, formData) {
+    try {
+      console.log('API: Starting upload for sessionId:', sessionId);
+      console.log('API: FormData type:', typeof formData);
+      console.log('API: FormData constructor:', formData.constructor.name);
+      
+      // Log FormData contents
+      if (formData instanceof FormData) {
+        console.log('API: FormData entries:');
+        for (let [key, value] of formData.entries()) {
+          if (key === 'recording') {
+            console.log(`API: ${key}: File (${value.size} bytes, ${value.type}, ${value.name})`);
+          } else {
+            console.log(`API: ${key}: ${value}`);
+          }
+        }
+      }
+      
+      const response = await this.request(`/Demo/sessions/${sessionId}/recordings/upload`, {
+        method: 'POST',
+        body: formData,
+        headers: {} // Remove Content-Type to let browser set it for FormData
+      });
+      
+      console.log('API: Upload response received:', response);
+      return response;
+    } catch (error) {
+      console.error('Upload demo recording error:', error);
+      console.error('Upload error details:', {
+        sessionId,
+        errorMessage: error.message,
+        errorStack: error.stack
+      });
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Join demo session
+  async joinDemoSession(sessionId) {
+    try {
+      const response = await this.request(`/Demo/sessions/${sessionId}/join`, {
+        method: 'POST'
+      });
+      return response;
+    } catch (error) {
+      console.error('Join demo session error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Leave demo session
+  async leaveDemoSession(sessionId) {
+    try {
+      const response = await this.request(`/Demo/sessions/${sessionId}/leave`, {
+        method: 'POST'
+      });
+      return response;
+    } catch (error) {
+      console.error('Leave demo session error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Get demo participants
+  async getDemoParticipants(sessionId) {
+    try {
+      const response = await this.request(`/Demo/sessions/${sessionId}/participants`);
+      return response;
+    } catch (error) {
+      console.error('Get demo participants error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Send demo signal (for WebRTC signaling)
+  async sendDemoSignal(sessionId, signalData) {
+    try {
+      const response = await this.request(`/Demo/sessions/${sessionId}/signal`, {
+        method: 'POST',
+        body: JSON.stringify(signalData)
+      });
+      return response;
+    } catch (error) {
+      console.error('Send demo signal error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Get demo signals (for WebRTC signaling polling)
+  async getDemoSignals(sessionId, since = null) {
+    try {
+      const queryParams = new URLSearchParams();
+      if (since) queryParams.append('since', since);
+      
+      const url = `/Demo/sessions/${sessionId}/signals${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      const response = await this.request(url);
+      return response;
+    } catch (error) {
+      console.error('Get demo signals error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Create demo room
+  async createDemoRoom(sessionId, roomData = {}) {
+    try {
+      console.log('API: Creating demo room for sessionId:', sessionId);
+      const response = await this.request(`/Demo/sessions/${sessionId}/create-room`, {
+        method: 'POST',
+        body: JSON.stringify(roomData)
+      });
+      console.log('API: Create room response:', response);
+      return response;
+    } catch (error) {
+      console.error('Create demo room error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Get demo room status
+  async getDemoRoomStatus(sessionId) {
+    try {
+      console.log('API: Checking room status for sessionId:', sessionId);
+      const response = await this.request(`/Demo/sessions/${sessionId}/room-status`);
+      console.log('API: Room status response:', response);
+      return response;
+    } catch (error) {
+      console.error('Get demo room status error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Get demo session by public link/invite code
+  async getDemoSessionByInvite(inviteCode) {
+    try {
+      console.log('API: Getting demo session by invite code:', inviteCode);
+      const response = await this.request(`/Demo/sessions/invite/${inviteCode}`);
+      console.log('API: Session by invite response:', response);
+      return response;
+    } catch (error) {
+      console.error('Get demo session by invite error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Generate invite link for demo session
+  async generateDemoInvite(sessionId, inviteData = {}) {
+    try {
+      console.log('API: Generating invite for sessionId:', sessionId);
+      const response = await this.request(`/Demo/sessions/${sessionId}/invite`, {
+        method: 'POST',
+        body: JSON.stringify({
+          expiresAt: inviteData.expiresAt,
+          maxUses: inviteData.maxUses || 50,
+          role: inviteData.role || 'participant',
+          ...inviteData
+        })
+      });
+      console.log('API: Generate invite response:', response);
+      return response;
+    } catch (error) {
+      console.error('Generate demo invite error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Get all invites for a session
+  async getDemoInvites(sessionId) {
+    try {
+      console.log('API: Getting invites for sessionId:', sessionId);
+      const response = await this.request(`/Demo/sessions/${sessionId}/invites`);
+      return response;
+    } catch (error) {
+      console.error('Get demo invites error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Revoke/delete invite
+  async revokeDemoInvite(sessionId, inviteId) {
+    try {
+      console.log('API: Revoking invite:', inviteId, 'for session:', sessionId);
+      const response = await this.request(`/Demo/sessions/${sessionId}/invites/${inviteId}`, {
+        method: 'DELETE'
+      });
+      return response;
+    } catch (error) {
+      console.error('Revoke demo invite error:', error);
       return { success: false, message: error.message };
     }
   }
