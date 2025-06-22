@@ -16,13 +16,17 @@ export function formatProgress(progress) {
   return Math.round(progress * 100)
 }
 
-export function getAvatarFallback(name) {
-  return name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
+export function getAvatarFallback(firstName, lastName) {
+  if (firstName && lastName) {
+    return `${firstName[0]}${lastName[0]}`.toUpperCase();
+  }
+  if (firstName) {
+    return firstName.slice(0, 2).toUpperCase();
+  }
+  if (lastName) {
+    return lastName.slice(0, 2).toUpperCase();
+  }
+  return 'U';
 }
 
 export function generateId() {
