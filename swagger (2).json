@@ -113,6 +113,18 @@
         }
       }
     },
+    "/Health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/Projects": {
       "get": {
         "tags": [

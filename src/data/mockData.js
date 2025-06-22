@@ -3,13 +3,13 @@ export const users = [
     id: 1,
     name: "Alex Chen",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
-    role: "Full-Stack Developer",
+    role: "",
     preferredRole: "developer",
-    xp: 1250,
+    xp: 1350,
     level: 3,
     badges: ["Code Ninja", "Team Player", "Bug Hunter"],
     completedProjects: 8,
-    bio: "Passionate about creating scalable web applications with modern tech stacks."
+    bio: "Passionate about creating scalable web applications with modern tech stacks.",
   },
   {
     id: 2,
@@ -21,7 +21,7 @@ export const users = [
     level: 2,
     badges: ["Design Wizard", "User Advocate"],
     completedProjects: 6,
-    bio: "Creating intuitive and beautiful user experiences that solve real problems."
+    bio: "Creating intuitive and beautiful user experiences that solve real problems.",
   },
   {
     id: 3,
@@ -33,7 +33,7 @@ export const users = [
     level: 2,
     badges: ["Data Guru", "Strategy Mind"],
     completedProjects: 4,
-    bio: "Bridging the gap between business needs and technical solutions."
+    bio: "Bridging the gap between business needs and technical solutions.",
   },
   {
     id: 4,
@@ -45,8 +45,8 @@ export const users = [
     level: 1,
     badges: ["Compliance Expert"],
     completedProjects: 3,
-    bio: "Ensuring projects meet regulatory requirements and ethical standards."
-  }
+    bio: "Ensuring projects meet regulatory requirements and ethical standards.",
+  },
 ];
 
 export const projects = [
@@ -68,8 +68,8 @@ export const projects = [
       { name: "Research & Analysis", completed: false, current: true },
       { name: "Prototype Development", completed: false, current: false },
       { name: "Testing & Validation", completed: false, current: false },
-      { name: "Final Presentation", completed: false, current: false }
-    ]
+      { name: "Final Presentation", completed: false, current: false },
+    ],
   },
   {
     id: 2,
@@ -89,8 +89,8 @@ export const projects = [
       { name: "Research & Analysis", completed: true, current: false },
       { name: "Prototype Development", completed: true, current: false },
       { name: "Testing & Validation", completed: false, current: true },
-      { name: "Final Presentation", completed: false, current: false }
-    ]
+      { name: "Final Presentation", completed: false, current: false },
+    ],
   },
   {
     id: 3,
@@ -110,9 +110,9 @@ export const projects = [
       { name: "Research & Analysis", completed: false, current: true },
       { name: "Prototype Development", completed: false, current: false },
       { name: "Testing & Validation", completed: false, current: false },
-      { name: "Final Presentation", completed: false, current: false }
-    ]
-  }
+      { name: "Final Presentation", completed: false, current: false },
+    ],
+  },
 ];
 
 export const teams = [
@@ -122,25 +122,26 @@ export const teams = [
     members: [
       { userId: 1, role: "Tech Lead", progress: 0.8 },
       { userId: 2, role: "UX Designer", progress: 0.7 },
-      { userId: 3, role: "Business Analyst", progress: 0.6 }
+      { userId: 3, role: "Business Analyst", progress: 0.6 },
     ],
     chatMessages: [
       {
         id: 1,
         userId: 1,
-        message: "Just finished the API integration. Dashboard is looking great!",
+        message:
+          "Just finished the API integration. Dashboard is looking great!",
         timestamp: "2024-01-20T10:30:00Z",
-        type: "user"
+        type: "user",
       },
       {
         id: 2,
         userId: 2,
         message: "Perfect! I've updated the UI components. Ready for testing.",
         timestamp: "2024-01-20T10:35:00Z",
-        type: "user"
-      }
-    ]
-  }
+        type: "user",
+      },
+    ],
+  },
 ];
 
 export const demoProjects = [
@@ -154,7 +155,7 @@ export const demoProjects = [
     tags: ["Mobile", "Sustainability", "Gamification"],
     likes: 42,
     aiInsights: "Strong UX design, excellent user engagement features",
-    completedDate: "2024-01-15"
+    completedDate: "2024-01-15",
   },
   {
     id: 2,
@@ -166,8 +167,8 @@ export const demoProjects = [
     tags: ["AI", "Finance", "Chatbot"],
     likes: 38,
     aiInsights: "Innovative AI implementation, needs better data validation",
-    completedDate: "2024-01-10"
-  }
+    completedDate: "2024-01-10",
+  },
 ];
 
 export const notifications = [
@@ -177,7 +178,7 @@ export const notifications = [
     title: "Team Invitation",
     message: "You've been invited to join the AI Coffee Assistant project",
     timestamp: "2024-01-20T14:30:00Z",
-    read: false
+    read: false,
   },
   {
     id: 2,
@@ -185,8 +186,8 @@ export const notifications = [
     title: "Project Milestone",
     message: "Greenhouse Dashboard reached 60% completion",
     timestamp: "2024-01-20T11:00:00Z",
-    read: true
-  }
+    read: true,
+  },
 ];
 
 export const roleTypes = [
@@ -194,7 +195,12 @@ export const roleTypes = [
   { id: "designer", name: "Designer", icon: "Palette", color: "bg-purple-500" },
   { id: "analyst", name: "Analyst", icon: "TrendingUp", color: "bg-green-500" },
   { id: "legal", name: "Legal", icon: "Scale", color: "bg-orange-500" },
-  { id: "marketing", name: "Marketing", icon: "Megaphone", color: "bg-pink-500" }
+  {
+    id: "marketing",
+    name: "Marketing",
+    icon: "Megaphone",
+    color: "bg-pink-500",
+  },
 ];
 
 export const aiCopilots = [
@@ -203,27 +209,27 @@ export const aiCopilots = [
     name: "DevBot",
     description: "Your coding companion",
     icon: "Code",
-    color: "text-blue-500"
+    color: "text-blue-500",
   },
   {
-    id: "uxbot", 
+    id: "uxbot",
     name: "UXBot",
     description: "Design thinking assistant",
     icon: "Palette",
-    color: "text-purple-500"
+    color: "text-purple-500",
   },
   {
     id: "ecobot",
-    name: "EcoBot", 
+    name: "EcoBot",
     description: "Business strategy helper",
     icon: "TrendingUp",
-    color: "text-green-500"
+    color: "text-green-500",
   },
   {
     id: "legalbot",
     name: "LegalBot",
-    description: "Compliance and law advisor", 
+    description: "Compliance and law advisor",
     icon: "Scale",
-    color: "text-orange-500"
-  }
-]; 
+    color: "text-orange-500",
+  },
+];
