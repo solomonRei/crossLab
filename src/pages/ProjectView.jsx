@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "../components/ui/Button";
 import {
@@ -18,6 +18,7 @@ import {
 } from "../components/ui/Tabs";
 import { Avatar, AvatarImage, AvatarFallback } from "../components/ui/Avatar";
 import { Copilot } from "../components/Copilot";
+import { TaskBoard } from "../components/TaskBoard";
 import {
   Users,
   Calendar,
@@ -56,6 +57,7 @@ const getStatusString = (status) => {
 export function ProjectView() {
   const { id } = useParams();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [project, setProject] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -102,6 +104,10 @@ export function ProjectView() {
         members: [...prevProject.team.members, newMember],
       },
     }));
+  };
+
+  const handleJoinDemo = () => {
+    navigate('/demo');
   };
 
   if (isLoading) {
@@ -227,6 +233,10 @@ export function ProjectView() {
               <Button className="flex-1">
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Team Chat
+              </Button>
+              <Button onClick={handleJoinDemo} variant="outline" className="flex-1">
+                <Video className="h-4 w-4 mr-2" />
+                Join Demo
               </Button>
               {user?.id !== project.createdById && (
                 <Button variant="secondary" className="flex-1">
@@ -412,40 +422,10 @@ export function ProjectView() {
           <CardContent>
             <Tabs value={activeTab}>
               <TabsContent value="tasks">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-semibold">
-                      Current Sprint Tasks
-                    </h3>
-                    <Button size="sm">Add Task</Button>
-                  </div>
-                  <div className="space-y-2">
-                    {tasks.map((task) => (
-                      <div
-                        key={task.id}
-                        className="flex items-center space-x-3 p-3 border rounded-lg"
-                      >
-                        {getStatusString(task.status) === "done" ? (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <Circle className="h-5 w-5 text-muted-foreground" />
-                        )}
-                        <span
-                          className={`flex-1 ${
-                            getStatusString(task.status) === "done"
-                              ? "line-through text-muted-foreground"
-                              : ""
-                          }`}
-                        >
-                          {task.title}
-                        </span>
-                        <Badge variant="outline" className="text-xs">
-                          {task.assignee?.firstName || "Unassigned"}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <TaskBoard 
+                  projectId={id} 
+                  sprintId={currentSprint?.id || null}
+                />
               </TabsContent>
 
               <TabsContent value="docs">

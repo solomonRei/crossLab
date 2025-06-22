@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
-import { format } from "date-fns";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { Button } from "../components/ui/Button";
@@ -25,7 +24,7 @@ import {
 } from "../components/ui/Select";
 import { authApiService } from "../services/authApi";
 import { PlusCircle, Loader2, Calendar as CalendarIcon } from "lucide-react";
-import { cn } from "../lib/utils";
+import { cn, formatDate } from "../lib/utils";
 
 const popularTags = [
   { value: "javascript", label: "JavaScript" },
@@ -376,7 +375,9 @@ export function ProjectCreate() {
               <div className="flex justify-end pt-4">
                 <Button type="submit" disabled={isLoading}>
                   {isLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    </>
                   ) : (
                     <PlusCircle className="mr-2 h-4 w-4" />
                   )}

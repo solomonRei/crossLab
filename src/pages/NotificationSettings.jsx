@@ -25,6 +25,38 @@ import { useNotifications } from '../hooks/useNotifications'
 
 const notificationCategories = [
   {
+    id: 'task_assigned',
+    name: 'Task Assignments',
+    description: 'Get notified when you\'re assigned to a task',
+    icon: Users,
+    color: 'text-blue-500',
+    defaultEnabled: true
+  },
+  {
+    id: 'task_status_changed',
+    name: 'Task Status Changes',
+    description: 'Notifications when task status is updated',
+    icon: FolderOpen,
+    color: 'text-green-500',
+    defaultEnabled: true
+  },
+  {
+    id: 'task_review',
+    name: 'Task Reviews',
+    description: 'Requests to review tasks submitted by team members',
+    icon: Star,
+    color: 'text-yellow-500',
+    defaultEnabled: true
+  },
+  {
+    id: 'task_completed',
+    name: 'Task Completions',
+    description: 'Notifications when tasks are completed',
+    icon: Award,
+    color: 'text-green-500',
+    defaultEnabled: true
+  },
+  {
     id: 'team_invite',
     name: 'Team Invitations',
     description: 'Get notified when you\'re invited to join a project team',
@@ -41,52 +73,20 @@ const notificationCategories = [
     defaultEnabled: true
   },
   {
-    id: 'review_request',
-    name: 'Peer Reviews',
-    description: 'Requests to review team members\' contributions',
-    icon: Star,
-    color: 'text-yellow-500',
-    defaultEnabled: true
-  },
-  {
-    id: 'message',
-    name: 'Messages',
-    description: 'Direct messages and team chat notifications',
+    id: 'mention',
+    name: 'Mentions',
+    description: 'Direct mentions in comments and discussions',
     icon: MessageCircle,
     color: 'text-purple-500',
     defaultEnabled: true
   },
   {
-    id: 'achievement',
-    name: 'Achievements',
-    description: 'Badge unlocks and XP milestones',
-    icon: Award,
-    color: 'text-orange-500',
-    defaultEnabled: true
-  },
-  {
-    id: 'deadline',
-    name: 'Deadlines',
-    description: 'Important deadline reminders and alerts',
-    icon: AlertCircle,
-    color: 'text-red-500',
-    defaultEnabled: true
-  },
-  {
-    id: 'milestone',
-    name: 'Milestones',
-    description: 'Sprint completions and project milestones',
-    icon: TrendingUp,
-    color: 'text-indigo-500',
+    id: 'general',
+    name: 'General Notifications',
+    description: 'System announcements and general updates',
+    icon: Bell,
+    color: 'text-gray-500',
     defaultEnabled: false
-  },
-  {
-    id: 'meeting',
-    name: 'Meetings',
-    description: 'Team meetings and demo session reminders',
-    icon: Calendar,
-    color: 'text-teal-500',
-    defaultEnabled: true
   }
 ]
 
