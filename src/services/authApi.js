@@ -1132,6 +1132,126 @@ class AuthApiService {
     }
     return response;
   }
+
+  // ===== DEMO SESSIONS API =====
+  
+  // Create demo session
+  async createDemoSession(sessionData) {
+    try {
+      const response = await this.request('/api/v1/Demo/sessions', {
+        method: 'POST',
+        body: JSON.stringify(sessionData)
+      });
+      return response;
+    } catch (error) {
+      console.error('Create demo session error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Get demo sessions
+  async getDemoSessions(filters = {}) {
+    try {
+      const queryParams = new URLSearchParams();
+      if (filters.status) queryParams.append('status', filters.status);
+      
+      const url = `/api/v1/Demo/sessions${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      const response = await this.request(url);
+      return response;
+    } catch (error) {
+      console.error('Get demo sessions error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Get demo session by ID
+  async getDemoSession(sessionId) {
+    try {
+      const response = await this.request(`/api/v1/Demo/sessions/${sessionId}`);
+      return response;
+    } catch (error) {
+      console.error('Get demo session error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Start demo session
+  async startDemoSession(sessionId) {
+    try {
+      const response = await this.request(`/api/v1/Demo/sessions/${sessionId}/start`, {
+        method: 'POST'
+      });
+      return response;
+    } catch (error) {
+      console.error('Start demo session error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // End demo session
+  async endDemoSession(sessionId) {
+    try {
+      const response = await this.request(`/api/v1/Demo/sessions/${sessionId}/end`, {
+        method: 'POST'
+      });
+      return response;
+    } catch (error) {
+      console.error('End demo session error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Invite participants to demo session
+  async inviteDemoParticipants(sessionId, inviteData) {
+    try {
+      const response = await this.request(`/api/v1/Demo/sessions/${sessionId}/invite`, {
+        method: 'POST',
+        body: JSON.stringify(inviteData)
+      });
+      return response;
+    } catch (error) {
+      console.error('Invite demo participants error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Start recording
+  async startDemoRecording(sessionId, recordingData) {
+    try {
+      const response = await this.request(`/api/v1/Demo/sessions/${sessionId}/recording/start`, {
+        method: 'POST',
+        body: JSON.stringify(recordingData)
+      });
+      return response;
+    } catch (error) {
+      console.error('Start demo recording error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Stop recording
+  async stopDemoRecording(sessionId) {
+    try {
+      const response = await this.request(`/api/v1/Demo/sessions/${sessionId}/recording/stop`, {
+        method: 'POST'
+      });
+      return response;
+    } catch (error) {
+      console.error('Stop demo recording error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // Get demo recordings
+  async getDemoRecordings(sessionId) {
+    try {
+      const response = await this.request(`/api/v1/Demo/sessions/${sessionId}/recordings`);
+      return response;
+    } catch (error) {
+      console.error('Get demo recordings error:', error);
+      return { success: false, message: error.message };
+    }
+  }
 }
 
 // Export singleton instance

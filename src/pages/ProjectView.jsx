@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "../components/ui/Button";
 import {
@@ -55,6 +55,7 @@ const getStatusString = (status) => {
 
 export function ProjectView() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [project, setProject] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -101,6 +102,10 @@ export function ProjectView() {
         members: [...prevProject.team.members, newMember],
       },
     }));
+  };
+
+  const handleJoinDemo = () => {
+    navigate('/demo');
   };
 
   if (isLoading) {
@@ -201,7 +206,7 @@ export function ProjectView() {
               <MessageSquare className="h-4 w-4 mr-2" />
               Team Chat
             </Button>
-            <Button>
+            <Button onClick={handleJoinDemo}>
               <Video className="h-4 w-4 mr-2" />
               Join Demo
             </Button>
