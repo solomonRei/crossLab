@@ -16,6 +16,7 @@ export function AvatarImage({ className, alt, ...props }) {
   return (
     <img
       className={cn("aspect-square h-full w-full", className)}
+      src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex"
       alt={alt || "Avatar"}
       {...props}
     />

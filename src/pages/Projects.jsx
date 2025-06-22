@@ -19,14 +19,16 @@ import {
   MapPin,
   Star,
   TrendingUp,
-  Code,
   Palette,
   Scale,
   Megaphone,
+  CodeXml,
+  BarChartBig,
 } from "lucide-react";
 import { authApiService } from "../services/authApi";
 import { roleTypes } from "../data/mockData";
 import { formatDate, formatProgress } from "../lib/utils";
+import { useAuth } from "../contexts/AuthContext";
 
 const difficultyColors = {
   Easy: "bg-green-500",
@@ -77,6 +79,7 @@ const getDifficultyString = (difficulty) => {
 };
 
 export function Projects() {
+  const { user } = useAuth();
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -85,6 +88,7 @@ export function Projects() {
   const [selectedRole, setSelectedRole] = useState("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
+  const [hideMyProjects, setHideMyProjects] = useState(false);
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -125,14 +129,19 @@ export function Projects() {
 
   const getRoleIcon = (roleId) => {
     const roleIcons = {
-      1: Code,
-      2: Palette,
-      3: TrendingUp,
-      4: Scale,
-      5: Megaphone,
+      developer: CodeXml,
+      designer: Palette,
+      analyst: BarChartBig,
+      legal: Scale,
+      marketing: Megaphone,
     };
     return roleIcons[roleId] || Users;
   };
+
+  const displayedProjects =
+    hideMyProjects && user
+      ? projects.filter((p) => p.createdById !== user.id)
+      : projects;
 
   return (
     <div className="space-y-6">
@@ -220,13 +229,30 @@ export function Projects() {
               </select>
             </div>
           </div>
+          <div className="pt-4 flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="hide-my-projects"
+              checked={hideMyProjects}
+              onChange={(e) => setHideMyProjects(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <label
+              htmlFor="hide-my-projects"
+              className="text-sm font-medium text-muted-foreground"
+            >
+              Hide my projects
+            </label>
+          </div>
         </CardContent>
       </Card>
 
       {/* Results */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">
-          {isLoading ? "Loading..." : `${projects.length} Projects Found`}
+          {isLoading
+            ? "Loading..."
+            : `${displayedProjects.length} Projects Found`}
         </h2>
         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
           <Star className="h-4 w-4" />
@@ -252,7 +278,7 @@ export function Projects() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {projects.map((project, index) => {
+          {displayedProjects.map((project, index) => {
             const statusString = getStatusString(project.status);
             const difficultyString = getDifficultyString(project.difficulty);
 
@@ -311,13 +337,16 @@ export function Projects() {
                       <span className="text-sm font-medium">Roles needed:</span>
                       <div className="flex space-x-1">
                         {(project.rolesNeeded || []).map((role) => {
+                          // Support both string IDs and role objects
+                          const roleId =
+                            typeof role === "object" ? role.id : role;
                           const roleInfo = roleTypes.find(
-                            (r) => r.name === role
+                            (r) => r.id === roleId || r.name === roleId
                           );
                           const IconComponent = getRoleIcon(roleInfo?.id);
                           return (
                             <div
-                              key={role}
+                              key={roleId}
                               className={`w-8 h-8 rounded-full ${roleInfo?.color} flex items-center justify-center`}
                             >
                               <IconComponent className="h-4 w-4 text-white" />
@@ -347,8 +376,8 @@ export function Projects() {
                           <Users className="h-4 w-4 mr-1" />
                         </div>
                         <div className="text-sm font-medium">
-                          {project.team?.members.length || 0}/
-                          {project.maxTeamSize}
+                          {project.currentParticipants || 0}/
+                          {project.maxParticipants}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           Team Size
@@ -359,7 +388,9 @@ export function Projects() {
                           <Clock className="h-4 w-4 mr-1" />
                         </div>
                         <div className="text-sm font-medium">
-                          {project.estimatedDuration}
+                          {project.durationInWeeks > 0
+                            ? `${project.durationInWeeks} weeks`
+                            : project.duration || "N/A"}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           Duration
@@ -370,10 +401,10 @@ export function Projects() {
                           <Calendar className="h-4 w-4 mr-1" />
                         </div>
                         <div className="text-sm font-medium">
-                          {formatDate(project.createdAt)}
+                          {formatDate(project.deadline)}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          Created
+                          Deadline
                         </div>
                       </div>
                     </div>
