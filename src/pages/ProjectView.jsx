@@ -40,6 +40,7 @@ import { authApiService } from "../services/authApi";
 import { formatDate, formatProgress, getAvatarFallback } from "../lib/utils";
 import { CreateTeamForm } from "../components/CreateTeamForm";
 import { InviteMemberForm } from "../components/InviteMemberForm";
+import { useAuth } from "../contexts/AuthContext";
 
 const getStatusString = (status) => {
   if (typeof status === "string") {
@@ -54,6 +55,7 @@ const getStatusString = (status) => {
 
 export function ProjectView() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [project, setProject] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -158,13 +160,30 @@ export function ProjectView() {
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
           <div className="flex-1">
-            <div className="flex items-center space-x-3 mb-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-2">
               <h1 className="text-3xl font-bold">{project.title}</h1>
-              <Badge variant="secondary" className="bg-blue-500 text-white">
+              <Badge
+                variant="secondary"
+                className="capitalize bg-blue-500 text-white"
+              >
                 {getStatusString(project.status).replace("-", " ")}
               </Badge>
+              <Badge
+                variant={
+                  project.difficulty === "Easy"
+                    ? "easy"
+                    : project.difficulty === "Medium"
+                    ? "medium"
+                    : "destructive"
+                }
+                className="capitalize"
+              >
+                {project.difficulty}
+              </Badge>
             </div>
-            <p className="text-muted-foreground mb-4">{project.description}</p>
+            <p className="text-muted-foreground mb-4">
+              {project.description || project.shortDescription}
+            </p>
 
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground mb-6">
               <div className="flex items-center" title="Application Deadline">
@@ -177,7 +196,7 @@ export function ProjectView() {
               </div>
               <div className="flex items-center" title="Team Size">
                 <Users className="h-4 w-4 mr-1.5" />
-                {project.team?.members?.length || 0} / {project.maxParticipants}{" "}
+                {project.currentParticipants || 0} / {project.maxParticipants}{" "}
                 members
               </div>
               <div className="flex items-center" title="Project Budget">
@@ -193,19 +212,71 @@ export function ProjectView() {
                 </div>
               )}
             </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {(project.tags || []).map((tag) => (
+                <Badge key={tag} variant="outline">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
           </div>
 
-          <div className="flex space-x-4">
-            <Button variant="outline">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Team Chat
-            </Button>
-            <Button>
-              <Video className="h-4 w-4 mr-2" />
-              Join Demo
-            </Button>
+          <div className="flex-shrink-0 w-full lg:w-auto">
+            <div className="flex lg:flex-col space-x-2 lg:space-x-0 lg:space-y-2">
+              <Button className="flex-1">
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Team Chat
+              </Button>
+              {user?.id !== project.createdById && (
+                <Button variant="secondary" className="flex-1">
+                  <Star className="h-4 w-4 mr-2" />
+                  Join Project
+                </Button>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Rewards */}
+        {project.rewards && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Award className="h-5 w-5 mr-2" />
+                Rewards & Recognition
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                <div className="p-4 border rounded-lg">
+                  <p className="text-2xl font-bold">
+                    {project.rewards.xp || 0}
+                  </p>
+                  <p className="text-sm text-muted-foreground">XP Points</p>
+                </div>
+                <div className="p-4 border rounded-lg flex flex-col items-center justify-center">
+                  {project.rewards.certificates ? (
+                    <CheckCircle className="h-8 w-8 text-green-500 mb-1" />
+                  ) : (
+                    <Circle className="h-8 w-8 text-muted-foreground mb-1" />
+                  )}
+                  <p className="text-sm text-muted-foreground">Certificate</p>
+                </div>
+                <div className="p-4 border rounded-lg flex flex-col items-center justify-center">
+                  {project.rewards.recommendations ? (
+                    <CheckCircle className="h-8 w-8 text-green-500 mb-1" />
+                  ) : (
+                    <Circle className="h-8 w-8 text-muted-foreground mb-1" />
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    Recommendation
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Sprint Progress */}
         <Card>

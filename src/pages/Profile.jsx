@@ -33,23 +33,32 @@ import { users, demoProjects } from "../data/mockData";
 import { getAvatarFallback, formatDate } from "../lib/utils";
 import { useProfileStore } from "../store/userStore";
 import { useAuth } from "../contexts/AuthContext";
+import authApi from "../services/authApi";
+
+const PREDEFINED_ROLES = [
+  "Developer",
+  "Designer",
+  "Analyst",
+  "Legal",
+  "Marketing",
+];
 
 export function Profile() {
-  console.log('Profile component: Rendering started')
-  
+  console.log("Profile component: Rendering started");
+
   const { profileData, setProfileData } = useProfileStore();
   const { user, isAuthenticated, isLoading } = useAuth();
-  
-  console.log('Profile component: Auth state:', { 
-    user, 
-    isAuthenticated, 
+
+  console.log("Profile component: Auth state:", {
+    user,
+    isAuthenticated,
     isLoading,
-    profileData: !!profileData 
-  })
+    profileData: !!profileData,
+  });
 
   // Show loading if auth is still loading
   if (isLoading) {
-    console.log('Profile component: Still loading auth')
+    console.log("Profile component: Still loading auth");
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center space-y-4">
@@ -57,42 +66,106 @@ export function Profile() {
           <p className="text-sm text-muted-foreground">Loading profile...</p>
         </div>
       </div>
-    )
+    );
   }
 
   // Check if we have required data
   if (!profileData) {
-    console.error('Profile component: No profile data available')
+    console.error("Profile component: No profile data available");
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Profile data not available</h2>
-          <p className="text-muted-foreground">Please try refreshing the page</p>
+          <h2 className="text-xl font-semibold mb-2">
+            Profile data not available
+          </h2>
+          <p className="text-muted-foreground">
+            Please try refreshing the page
+          </p>
         </div>
       </div>
-    )
+    );
   }
-  
+
   // Fallback to mock data for demo purposes
   const currentUser = user || users[0];
-  console.log('Profile component: Current user:', currentUser)
-  
-  const userProjects = demoProjects.filter(project => 
-    project.teamMembers.includes(currentUser?.name || profileData?.name || '')
-  );
-  console.log('Profile component: User projects:', userProjects)
+  console.log("Profile component: Current user:", currentUser);
 
-  const handleDataParsed = (parsedCvData) => {
-    console.log('Profile component: CV data parsed:', parsedCvData)
-    
+  const userProjects = demoProjects.filter((project) =>
+    project.teamMembers.includes(currentUser?.name || profileData?.name || "")
+  );
+  console.log("Profile component: User projects:", userProjects);
+
+  const getMappedRole = async (role) => {
+    const apiKey = process.env.REACT_APP_OPENAI_API_KEY;
+    if (!apiKey) {
+      console.error("OpenAI API key not configured");
+      return role;
+    }
+
     try {
+      const response = await fetch(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [
+              {
+                role: "system",
+                content: `You are an expert role classifier. Given a job title, map it to one of the following predefined roles: ${PREDEFINED_ROLES.join(
+                  ", "
+                )}. Respond with ONLY the matching role name. For example, if the input is 'Senior Software Engineer', the output should be 'Developer'.`,
+              },
+              {
+                role: "user",
+                content: `Classify this role: "${role}"`,
+              },
+            ],
+            temperature: 0,
+            max_tokens: 10,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to get mapped role from OpenAI");
+      }
+
+      const data = await response.json();
+      const mappedRole = data.choices[0].message.content.trim();
+
+      const matchingRole = PREDEFINED_ROLES.find(
+        (r) => r.toLowerCase() === mappedRole.toLowerCase()
+      );
+
+      return (
+        matchingRole ||
+        (PREDEFINED_ROLES.includes(mappedRole) ? mappedRole : role)
+      );
+    } catch (error) {
+      console.error("Error getting mapped role:", error);
+      return role; // Fallback to original role
+    }
+  };
+
+  const handleDataParsed = async (parsedCvData) => {
+    console.log("Profile component: CV data parsed:", parsedCvData);
+
+    try {
+      const originalRole =
+        parsedCvData.experience?.[0]?.title || profileData.role;
+      const mappedRole = await getMappedRole(originalRole);
+
       const newProfileData = {
         ...profileData,
-        name: parsedCvData.personalInfo?.name || profileData.name,
-        role: parsedCvData.experience?.[0]?.title || profileData.role,
+        role: originalRole,
+        preferredRole: mappedRole,
         bio: parsedCvData.summary || profileData.bio,
         location: parsedCvData.personalInfo?.location || profileData.location,
-        email: parsedCvData.personalInfo?.email || profileData.email,
         linkedin: parsedCvData.personalInfo?.linkedin,
         github: parsedCvData.personalInfo?.github,
         education: parsedCvData.education,
@@ -103,9 +176,12 @@ export function Profile() {
       };
 
       setProfileData(newProfileData);
-      console.log('Profile component: Profile data updated successfully')
+      console.log("Profile component: Profile data updated locally");
+
+      await authApi.updateUserProfile({ preferredRole: mappedRole });
+      console.log("Profile component: Preferred role updated on server");
     } catch (error) {
-      console.error('Profile component: Error updating profile data:', error)
+      console.error("Profile component: Error updating profile data:", error);
     }
   };
 
@@ -145,7 +221,7 @@ export function Profile() {
     },
   ];
 
-  console.log('Profile component: Rendering profile UI')
+  console.log("Profile component: Rendering profile UI");
 
   try {
     return (
@@ -157,25 +233,30 @@ export function Profile() {
             <CardContent className="p-6 pt-8">
               <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
                 <Avatar className="h-24 w-24">
-                  <AvatarImage src={profileData.avatar} alt={profileData.name || 'User'} />
+                  <AvatarImage
+                    src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex"
+                    alt={profileData.name || "User"}
+                  />
                   <AvatarFallback className="text-xl">
-                    {getAvatarFallback(profileData.name || 'User')}
+                    {getAvatarFallback(profileData.name || "User")}
                   </AvatarFallback>
                 </Avatar>
 
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
-                    <h1 className="text-3xl font-bold">{profileData.name || 'Unknown User'}</h1>
+                    <h1 className="text-3xl font-bold">
+                      {profileData.name || "Unknown User"}
+                    </h1>
                     <Button variant="outline" size="sm">
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
                     </Button>
                   </div>
                   <p className="text-xl text-muted-foreground mb-3">
-                    {profileData.role || 'No role specified'}
+                    {profileData.role || "No role specified"}
                   </p>
                   <p className="text-muted-foreground mb-4 max-w-2xl">
-                    {profileData.bio || 'No bio available'}
+                    {profileData.bio || "No bio available"}
                   </p>
 
                   <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
@@ -189,7 +270,7 @@ export function Profile() {
                     </div>
                     <div className="flex items-center">
                       <Mail className="h-4 w-4 mr-1" />
-                      {profileData.email || 'No email available'}
+                      {profileData.email || "No email available"}
                     </div>
                   </div>
 
@@ -246,7 +327,9 @@ export function Profile() {
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Progress to Level {(profileData.level || 1) + 1}</span>
+                    <span>
+                      Progress to Level {(profileData.level || 1) + 1}
+                    </span>
                     <span>{Math.round(xpProgress * 100)}%</span>
                   </div>
                   <Progress value={xpProgress * 100} />
@@ -264,7 +347,9 @@ export function Profile() {
                     <div className="text-2xl font-bold text-primary">
                       {profileData.completedProjects || 0}
                     </div>
-                    <div className="text-sm text-muted-foreground">Projects</div>
+                    <div className="text-sm text-muted-foreground">
+                      Projects
+                    </div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-primary">
@@ -298,7 +383,9 @@ export function Profile() {
                     <div key={i}>
                       <h3 className="font-semibold">{edu.institution}</h3>
                       <p className="text-muted-foreground">{edu.degree}</p>
-                      <p className="text-sm text-muted-foreground">{edu.year}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {edu.year}
+                      </p>
                     </div>
                   ))}
                 </CardContent>
@@ -382,7 +469,9 @@ export function Profile() {
                   {profileData.projects.map((proj, i) => (
                     <div key={i}>
                       <h3 className="font-semibold">{proj.name}</h3>
-                      <p className="text-muted-foreground">{proj.description}</p>
+                      <p className="text-muted-foreground">
+                        {proj.description}
+                      </p>
                       {proj.technologies?.length > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2">
                           {proj.technologies.map((tech) => (
@@ -586,17 +675,21 @@ export function Profile() {
       </div>
     );
   } catch (error) {
-    console.error('Profile component: Render error:', error)
+    console.error("Profile component: Render error:", error);
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2 text-red-600">Profile Error</h2>
-          <p className="text-muted-foreground mb-4">An error occurred while loading the profile</p>
+          <h2 className="text-xl font-semibold mb-2 text-red-600">
+            Profile Error
+          </h2>
+          <p className="text-muted-foreground mb-4">
+            An error occurred while loading the profile
+          </p>
           <p className="text-sm text-muted-foreground font-mono bg-muted p-2 rounded">
             {error.message}
           </p>
         </div>
       </div>
-    )
+    );
   }
 }
