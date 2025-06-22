@@ -18,6 +18,7 @@ import {
 } from "../components/ui/Tabs";
 import { Avatar, AvatarImage, AvatarFallback } from "../components/ui/Avatar";
 import { Copilot } from "../components/Copilot";
+import { TaskBoard } from "../components/TaskBoard";
 import {
   Users,
   Calendar,
@@ -341,40 +342,10 @@ export function ProjectView() {
           <CardContent>
             <Tabs value={activeTab}>
               <TabsContent value="tasks">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-semibold">
-                      Current Sprint Tasks
-                    </h3>
-                    <Button size="sm">Add Task</Button>
-                  </div>
-                  <div className="space-y-2">
-                    {tasks.map((task) => (
-                      <div
-                        key={task.id}
-                        className="flex items-center space-x-3 p-3 border rounded-lg"
-                      >
-                        {getStatusString(task.status) === "done" ? (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <Circle className="h-5 w-5 text-muted-foreground" />
-                        )}
-                        <span
-                          className={`flex-1 ${
-                            getStatusString(task.status) === "done"
-                              ? "line-through text-muted-foreground"
-                              : ""
-                          }`}
-                        >
-                          {task.title}
-                        </span>
-                        <Badge variant="outline" className="text-xs">
-                          {task.assignee?.firstName || "Unassigned"}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <TaskBoard 
+                  projectId={id} 
+                  sprintId={currentSprint?.id || null}
+                />
               </TabsContent>
 
               <TabsContent value="docs">
