@@ -26,4 +26,10 @@ export const useProfileStore = create((set) => ({
       localStorage.setItem("userProfile", JSON.stringify(newProfileData));
     }
   },
+  clearProfileData: () => {
+    set({ profileData: users[0] }); // Reset to default mock data
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("userProfile");
+    }
+  },
 }));

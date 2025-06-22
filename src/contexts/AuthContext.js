@@ -13,6 +13,7 @@ import {
   getUserFromToken,
   getTimeUntilExpiration,
 } from "../lib/tokenUtils";
+import { useProfileStore } from "../store/userStore";
 
 // Auth states
 const AUTH_ACTIONS = {
@@ -343,6 +344,9 @@ export function AuthProvider({ children }) {
           payload: payload,
         });
 
+        // After a successful login, we load fresh user data
+        await loadUser();
+
         toast.success(
           `Welcome back, ${response.data.user?.firstName || "User"}!`
         );
@@ -423,9 +427,14 @@ export function AuthProvider({ children }) {
 
   // Logout function
   const logout = () => {
-    authApiService.logout();
+    // Clear the token from the API service
+    authApiService.setToken(null);
+    // Clear profile data from store and localStorage
+    useProfileStore.getState().clearProfileData();
+    // Dispatch the logout action
     dispatch({ type: AUTH_ACTIONS.LOGOUT });
-    toast.success("Logged out successfully");
+    // Show a success message
+    toast.success("You have been signed out.");
   };
 
   // Clear errors function with guard
