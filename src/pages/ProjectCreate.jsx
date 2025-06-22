@@ -347,6 +347,7 @@ export function ProjectCreate() {
                     className="w-full"
                     customInput={
                       <Button
+                        type="button"
                         variant="outline"
                         className="w-full justify-start"
                       >

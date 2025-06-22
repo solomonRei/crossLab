@@ -1,4 +1,4 @@
-import { cn } from "../../lib/utils"
+import { cn } from "../../lib/utils";
 
 export function Avatar({ className, ...props }) {
   return (
@@ -9,7 +9,7 @@ export function Avatar({ className, ...props }) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 export function AvatarImage({ className, alt, ...props }) {
@@ -20,7 +20,7 @@ export function AvatarImage({ className, alt, ...props }) {
       alt={alt || "Avatar"}
       {...props}
     />
-  )
+  );
 }
 
 export function AvatarFallback({ className, ...props }) {
@@ -32,5 +32,5 @@ export function AvatarFallback({ className, ...props }) {
       )}
       {...props}
     />
-  )
-} 
+  );
+}

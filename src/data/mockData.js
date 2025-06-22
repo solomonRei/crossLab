@@ -3,7 +3,7 @@ export const users = [
     id: 1,
     name: "Alex Chen",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
-    role: "",
+    role: "Full-Stack Developer",
     preferredRole: "developer",
     xp: 1350,
     level: 3,

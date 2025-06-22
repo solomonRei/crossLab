@@ -15,7 +15,7 @@ import {
   X,
   LogOut,
   Video,
-  UserPlus
+  UserPlus,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Avatar, AvatarImage, AvatarFallback } from "../components/ui/Avatar";
@@ -52,7 +52,7 @@ export function DashboardLayout() {
 
   // Initialize notifications with user ID
   const { unreadCount } = useNotifications(user?.id);
-  
+
   // Initialize invitations with user ID
   const { invitationsCount } = useInvitations(user?.id);
 

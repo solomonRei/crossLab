@@ -71,7 +71,7 @@ export function ProjectView() {
   const [activeTab, setActiveTab] = useState("tasks");
 
   // Check if current user is a member of the project
-  const isMember = teamMembers.some(member => member.id === user?.id);
+  const isMember = teamMembers.some((member) => member.id === user?.id);
   const isCreator = project?.createdBy === user?.id;
 
   useEffect(() => {
@@ -84,22 +84,27 @@ export function ProjectView() {
     try {
       setLoading(true);
       const response = await authApiService.getProjectById(id);
-      
+
       if (response.success) {
         setProject(response.data);
-        
+
         // Fetch project members
-        const membersResponse = await authApiService.getProjectMembers(id, { isActive: true });
+        const membersResponse = await authApiService.getProjectMembers(id, {
+          isActive: true,
+        });
         if (membersResponse.success) {
           setTeamMembers(membersResponse.data || []);
         }
       } else {
         console.error("Failed to fetch project:", response.message);
-        toast.error('Project Load Error', response.message || 'Failed to load project');
+        toast.error(
+          "Project Load Error",
+          response.message || "Failed to load project"
+        );
       }
     } catch (error) {
       console.error("Error fetching project:", error);
-      toast.error('Project Load Error', 'Failed to load project details');
+      toast.error("Project Load Error", "Failed to load project details");
     } finally {
       setLoading(false);
     }
@@ -123,7 +128,7 @@ export function ProjectView() {
   };
 
   const handleJoinDemo = () => {
-    toast.success('Opening Demo', 'Redirecting to demo page...');
+    toast.success("Opening Demo", "Redirecting to demo page...");
     navigate("/demo");
   };
 
@@ -132,7 +137,10 @@ export function ProjectView() {
   };
 
   const handleJoinRequestSent = () => {
-    toast.success('Request Sent', 'Your join request has been sent to the project creator');
+    toast.success(
+      "Request Sent",
+      "Your join request has been sent to the project creator"
+    );
     setShowJoinRequest(false);
   };
 
@@ -240,33 +248,43 @@ export function ProjectView() {
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Team Chat
               </Button>
-              <Button onClick={handleJoinDemo} variant="outline" className="flex-1">
+              <Button
+                onClick={handleJoinDemo}
+                variant="outline"
+                className="flex-1"
+              >
                 <Video className="h-4 w-4 mr-2" />
                 Join Demo
               </Button>
-              
+
               {/* Show different buttons based on user role */}
-              {user && !isMember && !isCreator && getStatusString(project.status) === "recruiting" && (
-                <Button onClick={handleJoinProject} className="flex-1 bg-green-600 hover:bg-green-700">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Request to Join
-                </Button>
-              )}
-              
+              {user &&
+                !isMember &&
+                !isCreator &&
+                getStatusString(project.status) === "recruiting" && (
+                  <Button
+                    onClick={handleJoinProject}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Request to Join
+                  </Button>
+                )}
+
               {user && isMember && !isCreator && (
                 <Button variant="secondary" className="flex-1" disabled>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Team Member
                 </Button>
               )}
-              
+
               {isCreator && (
                 <Button variant="outline" className="flex-1" disabled>
                   <Star className="h-4 w-4 mr-2" />
                   Project Creator
                 </Button>
               )}
-              
+
               {!user && (
                 <Button variant="secondary" className="flex-1" disabled>
                   <UserPlus className="h-4 w-4 mr-2" />
@@ -389,7 +407,10 @@ export function ProjectView() {
                 >
                   <Avatar>
                     <AvatarImage
-                      src={member.avatarUrl}
+                      src={
+                        member.avatarUrl ||
+                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.firstName}`
+                      }
                       alt={member.firstName}
                     />
                     <AvatarFallback>
@@ -451,8 +472,8 @@ export function ProjectView() {
           <CardContent>
             <Tabs value={activeTab}>
               <TabsContent value="tasks">
-                <TaskBoard 
-                  projectId={id} 
+                <TaskBoard
+                  projectId={id}
                   sprintId={currentSprint?.id || null}
                 />
               </TabsContent>
@@ -597,7 +618,10 @@ export function ProjectView() {
                           <div className="flex items-center space-x-3 mb-3">
                             <Avatar className="h-8 w-8">
                               <AvatarImage
-                                src={member.avatarUrl}
+                                src={
+                                  member.avatarUrl ||
+                                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.firstName}`
+                                }
                                 alt={member.firstName}
                               />
                               <AvatarFallback>
@@ -648,10 +672,7 @@ export function ProjectView() {
               </TabsContent>
 
               <TabsContent value="team" className="space-y-6">
-                <ProjectMembersManager 
-                  project={project} 
-                  currentUser={user}
-                />
+                <ProjectMembersManager project={project} currentUser={user} />
               </TabsContent>
 
               <TabsContent value="details" className="space-y-6">
@@ -695,7 +716,10 @@ export function ProjectView() {
                         >
                           <Avatar>
                             <AvatarImage
-                              src={member.avatarUrl}
+                              src={
+                                member.avatarUrl ||
+                                `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.firstName}`
+                              }
                               alt={member.firstName}
                             />
                             <AvatarFallback>

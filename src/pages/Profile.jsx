@@ -234,7 +234,10 @@ export function Profile() {
               <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
                 <Avatar className="h-24 w-24">
                   <AvatarImage
-                    src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex"
+                    src={
+                      profileData.avatar ||
+                      "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex"
+                    }
                     alt={profileData.name || "User"}
                   />
                   <AvatarFallback className="text-xl">
