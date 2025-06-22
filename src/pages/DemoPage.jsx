@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Video, 
@@ -7,20 +8,25 @@ import {
   Clock,
   Play,
   Plus,
-  Settings
+  Settings,
+  RefreshCw,
+  FileVideo
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { DemoRoom } from '../components/demo/DemoRoom';
+import { CreateDemoModal } from '../components/demo/CreateDemoModal';
+import { DemoRecordings } from '../components/demo/DemoRecordings';
+import { useToast } from '../components/ui/Toast';
+import { authApiService } from '../services/authApi';
 import { 
   DEMO_SESSION_TYPE, 
   DEMO_SESSION_STATUS, 
   RECORDING_QUALITY 
 } from '../hooks/demo/useDemoState';
 
-const DemoSessionCard = ({ session, onJoin, onEdit }) => {
+const DemoSessionCard = ({ session, onJoin, onEdit, onViewRecordings }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case DEMO_SESSION_STATUS.LIVE:
@@ -99,7 +105,9 @@ const DemoSessionCard = ({ session, onJoin, onEdit }) => {
               {session.autoRecord && (
                 <Badge variant="secondary">Auto Record</Badge>
               )}
-              <Badge variant="outline">{session.recordingQuality}</Badge>
+              {session.recordingQuality && (
+                <Badge variant="outline">{session.recordingQuality}</Badge>
+              )}
             </div>
             
             <div className="flex items-center gap-2 pt-2">
@@ -115,7 +123,17 @@ const DemoSessionCard = ({ session, onJoin, onEdit }) => {
               <Button 
                 variant="outline" 
                 size="sm"
+                onClick={() => onViewRecordings(session)}
+                title="View Recordings"
+              >
+                <FileVideo className="h-4 w-4" />
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                size="sm"
                 onClick={() => onEdit(session)}
+                title="Settings"
               >
                 <Settings className="h-4 w-4" />
               </Button>
@@ -128,51 +146,54 @@ const DemoSessionCard = ({ session, onJoin, onEdit }) => {
 };
 
 export const DemoPage = () => {
-  const [activeSession, setActiveSession] = useState(null);
   const [userRole, setUserRole] = useState('host'); // host, presenter, participant, observer
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [demoSessions, setDemoSessions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedSessionForRecordings, setSelectedSessionForRecordings] = useState(null);
+  const [isRecordingsModalOpen, setIsRecordingsModalOpen] = useState(false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
-  // Mock demo sessions
-  const mockSessions = [
-    {
-      id: 'demo-1',
-      title: 'Product Demo - CrossLab Platform',
-      description: 'Comprehensive overview of the CrossLab collaboration platform features',
-      type: DEMO_SESSION_TYPE.PRODUCT_DEMO,
-      status: DEMO_SESSION_STATUS.SCHEDULED,
-      scheduledAt: new Date(Date.now() + 3600000), // 1 hour from now
-      maxParticipants: 50,
-      participantCount: 12,
-      autoRecord: true,
-      recordingQuality: RECORDING_QUALITY.HD
-    },
-    {
-      id: 'demo-2',
-      title: 'Team Training Session',
-      description: 'Training session for new team members on project workflows',
-      type: DEMO_SESSION_TYPE.TRAINING,
-      status: DEMO_SESSION_STATUS.LIVE,
-      scheduledAt: new Date(Date.now() - 1800000), // 30 minutes ago
-      maxParticipants: 20,
-      participantCount: 8,
-      autoRecord: false,
-      recordingQuality: RECORDING_QUALITY.FULL_HD
-    },
-    {
-      id: 'demo-3',
-      title: 'Client Presentation - Q4 Results',
-      description: 'Quarterly results presentation for key stakeholders',
-      type: DEMO_SESSION_TYPE.CLIENT_PRESENTATION,
-      status: DEMO_SESSION_STATUS.ENDED,
-      scheduledAt: new Date(Date.now() - 7200000), // 2 hours ago
-      maxParticipants: 30,
-      participantCount: 25,
-      autoRecord: true,
-      recordingQuality: RECORDING_QUALITY.UHD
+  // Load demo sessions from API
+  const loadDemoSessions = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await authApiService.getDemoSessions();
+      
+      if (response.success) {
+        setDemoSessions(response.data || []);
+        console.log('Demo sessions loaded:', response.data?.length || 0);
+      } else {
+        setError(response.message || 'Failed to load demo sessions');
+        toast.error('Load Error', response.message || 'Failed to load demo sessions');
+      }
+    } catch (err) {
+      console.error('Error loading demo sessions:', err);
+      setError(err.message);
+      toast.error('Load Error', 'Failed to load demo sessions');
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
+
+  // Load sessions on component mount
+  useEffect(() => {
+    loadDemoSessions();
+  }, []);
 
   const handleJoinSession = (session) => {
-    setActiveSession(session);
+    console.log('Joining session:', session.id);
+    // Navigate to the demo room with the session ID in the URL
+    navigate(`/demo/room/${session.id}`, {
+      state: {
+        fromDemoPage: true,
+        role: userRole // Pass the selected role
+      }
+    });
   };
 
   const handleEditSession = (session) => {
@@ -180,24 +201,28 @@ export const DemoPage = () => {
     // TODO: Open edit modal
   };
 
+  const handleViewRecordings = (session) => {
+    console.log('View recordings for session:', session.id);
+    setSelectedSessionForRecordings(session);
+    setIsRecordingsModalOpen(true);
+  };
+
   const handleCreateSession = () => {
-    console.log('Create new session');
-    // TODO: Open create modal
+    setIsCreateModalOpen(true);
+  };
+
+  const handleSessionCreated = (newSession) => {
+    setDemoSessions(prev => [newSession, ...prev]);
+    toast.success('Session Created', 'Demo session created successfully');
   };
 
   const handleLeaveSession = () => {
-    setActiveSession(null);
+    // Implement leave session logic
   };
 
-  if (activeSession) {
-    return (
-      <DemoRoom 
-        sessionId={activeSession.id}
-        userRole={userRole}
-        onLeave={handleLeaveSession}
-      />
-    );
-  }
+  const handleRefresh = () => {
+    loadDemoSessions();
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
@@ -226,6 +251,15 @@ export const DemoPage = () => {
               <option value="observer">Observer</option>
             </select>
             
+            <Button 
+              variant="outline" 
+              onClick={handleRefresh}
+              disabled={isLoading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            
             <Button onClick={handleCreateSession}>
               <Plus className="h-4 w-4 mr-2" />
               New Session
@@ -233,62 +267,129 @@ export const DemoPage = () => {
           </div>
         </div>
 
-        {/* Demo Sessions Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mockSessions.map((session) => (
-            <DemoSessionCard
-              key={session.id}
-              session={session}
-              onJoin={handleJoinSession}
-              onEdit={handleEditSession}
-            />
-          ))}
-        </div>
-
-        {/* Quick Start Info */}
-        <div className="mt-12 bg-blue-50 dark:bg-blue-900/20 rounded-xl p-8">
-          <h2 className="text-xl font-semibold text-blue-900 dark:text-blue-100 mb-4">
-            Quick Start Guide
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
             <div className="text-center">
-              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <Plus className="h-6 w-6 text-white" />
-              </div>
-              <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                Create Session
-              </h3>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                Set up a new demo session with custom settings and participant limits
-              </p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <Users className="h-6 w-6 text-white" />
-              </div>
-              <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                Invite Participants
-              </h3>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                Send invitation links to participants via email or direct sharing
-              </p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <Video className="h-6 w-6 text-white" />
-              </div>
-              <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                Start Demo
-              </h3>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                Begin your interactive demo with video, screen sharing, and recording
-              </p>
+              <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+              <p className="text-gray-600 dark:text-gray-400">Loading demo sessions...</p>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Error State */}
+        {error && !isLoading && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-red-800 dark:text-red-200 font-medium mb-2">
+                  Failed to Load Demo Sessions
+                </h3>
+                <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+              </div>
+              <Button variant="outline" onClick={handleRefresh}>
+                Try Again
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Demo Sessions Grid */}
+        {!isLoading && !error && (
+          <>
+            {demoSessions.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {demoSessions.map((session) => (
+                  <DemoSessionCard
+                    key={session.id}
+                    session={session}
+                    onJoin={handleJoinSession}
+                    onEdit={handleEditSession}
+                    onViewRecordings={handleViewRecordings}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Video className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
+                  No Demo Sessions
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  Get started by creating your first demo session
+                </p>
+                <Button onClick={handleCreateSession}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Demo Session
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Quick Start Info */}
+        {!isLoading && demoSessions.length > 0 && (
+          <div className="mt-12 bg-blue-50 dark:bg-blue-900/20 rounded-xl p-8">
+            <h2 className="text-xl font-semibold text-blue-900 dark:text-blue-100 mb-4">
+              Quick Start Guide
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <Plus className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+                  Create Session
+                </h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  Set up a new demo session with custom settings and participant limits
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <Users className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+                  Invite Participants
+                </h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  Send invitation links to participants via email or direct sharing
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <Video className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+                  Start Demo
+                </h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  Begin your interactive demo with video, screen sharing, and recording
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Create Demo Modal */}
+      <CreateDemoModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSessionCreated={handleSessionCreated}
+      />
+
+      {/* Demo Recordings Modal */}
+      <DemoRecordings
+        sessionId={selectedSessionForRecordings?.id}
+        isOpen={isRecordingsModalOpen}
+        onClose={() => {
+          setIsRecordingsModalOpen(false);
+          setSelectedSessionForRecordings(null);
+        }}
+      />
     </div>
   );
 }; 

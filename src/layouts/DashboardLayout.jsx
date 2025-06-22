@@ -20,6 +20,7 @@ import { Button } from "../components/ui/Button";
 import { Avatar, AvatarImage, AvatarFallback } from "../components/ui/Avatar";
 import { Badge } from "../components/ui/Badge";
 import { NotificationCenter } from "../components/NotificationCenter";
+import { Copilot } from "../components/Copilot";
 import { useNotifications } from "../hooks/useNotifications";
 import { useAuth } from "../contexts/AuthContext";
 import { useProfileStore } from "../store/userStore";
@@ -43,6 +44,7 @@ export function DashboardLayout() {
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(false);
 
   // Initialize notifications with user ID
   const { getCounts } = useNotifications(user?.id || "anonymous");
@@ -270,6 +272,12 @@ export function DashboardLayout() {
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
+
+      {/* AI Copilot - всегда доступен в правом нижнем углу */}
+      <Copilot
+        isOpen={copilotOpen}
+        onToggle={() => setCopilotOpen(!copilotOpen)}
+      />
     </div>
   );
 }

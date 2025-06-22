@@ -17,7 +17,6 @@ import {
   TabsContent,
 } from "../components/ui/Tabs";
 import { Avatar, AvatarImage, AvatarFallback } from "../components/ui/Avatar";
-import { Copilot } from "../components/Copilot";
 import { TaskBoard } from "../components/TaskBoard";
 import {
   Users,
@@ -36,12 +35,18 @@ import {
   DollarSign,
   Briefcase,
   Loader2,
+  Play,
+  Target,
+  UserPlus,
 } from "lucide-react";
 import { authApiService } from "../services/authApi";
 import { formatDate, formatProgress, getAvatarFallback } from "../lib/utils";
 import { CreateTeamForm } from "../components/CreateTeamForm";
 import { InviteMemberForm } from "../components/InviteMemberForm";
 import { useAuth } from "../contexts/AuthContext";
+import { ProjectMembersManager } from "../components/project/ProjectMembersManager";
+import { JoinProjectRequest } from "../components/project/JoinProjectRequest";
+import { useToast } from "../components/ui/Toast";
 
 const getStatusString = (status) => {
   if (typeof status === "string") {
@@ -58,36 +63,47 @@ export function ProjectView() {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [project, setProject] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showJoinRequest, setShowJoinRequest] = useState(false);
   const [activeTab, setActiveTab] = useState("tasks");
-  const [copilotOpen, setCopilotOpen] = useState(false);
+
+  // Check if current user is a member of the project
+  const isMember = teamMembers.some(member => member.id === user?.id);
+  const isCreator = project?.createdBy === user?.id;
 
   useEffect(() => {
-    const fetchProject = async () => {
-      try {
-        setIsLoading(true);
-        const response = await authApiService.getProjectById(id);
-        if (response.success) {
-          setProject(response.data);
-        } else {
-          throw new Error(
-            response.message || "Failed to fetch project details"
-          );
-        }
-      } catch (err) {
-        console.error("Full error details:", err);
-        setError(err.message || "Failed to load project");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     if (id) {
       fetchProject();
     }
   }, [id]);
+
+  const fetchProject = async () => {
+    try {
+      setLoading(true);
+      const response = await authApiService.getProjectById(id);
+      
+      if (response.success) {
+        setProject(response.data);
+        
+        // Fetch project members
+        const membersResponse = await authApiService.getProjectMembers(id, { isActive: true });
+        if (membersResponse.success) {
+          setTeamMembers(membersResponse.data || []);
+        }
+      } else {
+        console.error("Failed to fetch project:", response.message);
+        toast.error('Project Load Error', response.message || 'Failed to load project');
+      }
+    } catch (error) {
+      console.error("Error fetching project:", error);
+      toast.error('Project Load Error', 'Failed to load project details');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleTeamCreated = (newTeam) => {
     setProject((prevProject) => ({
@@ -107,24 +123,23 @@ export function ProjectView() {
   };
 
   const handleJoinDemo = () => {
-    navigate('/demo');
+    toast.success('Opening Demo', 'Redirecting to demo page...');
+    navigate("/demo");
   };
 
-  if (isLoading) {
+  const handleJoinProject = () => {
+    setShowJoinRequest(true);
+  };
+
+  const handleJoinRequestSent = () => {
+    toast.success('Request Sent', 'Your join request has been sent to the project creator');
+    setShowJoinRequest(false);
+  };
+
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-2">Error</h2>
-          <p>{error}</p>
-        </div>
       </div>
     );
   }
@@ -139,15 +154,6 @@ export function ProjectView() {
 
   const tasks = project?.tasks || [];
   const sprints = project?.sprints || [];
-
-  const teamMembers = project.team
-    ? project.team.members.map((member) => ({
-        ...member.user,
-        id: member.user.id,
-        role: member.role,
-        progress: member.progress,
-      }))
-    : [];
 
   const currentSprint =
     sprints.find((s) => getStatusString(s.status) === "in-progress") || {};
@@ -238,10 +244,33 @@ export function ProjectView() {
                 <Video className="h-4 w-4 mr-2" />
                 Join Demo
               </Button>
-              {user?.id !== project.createdById && (
-                <Button variant="secondary" className="flex-1">
+              
+              {/* Show different buttons based on user role */}
+              {user && !isMember && !isCreator && getStatusString(project.status) === "recruiting" && (
+                <Button onClick={handleJoinProject} className="flex-1 bg-green-600 hover:bg-green-700">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Request to Join
+                </Button>
+              )}
+              
+              {user && isMember && !isCreator && (
+                <Button variant="secondary" className="flex-1" disabled>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Team Member
+                </Button>
+              )}
+              
+              {isCreator && (
+                <Button variant="outline" className="flex-1" disabled>
                   <Star className="h-4 w-4 mr-2" />
-                  Join Project
+                  Project Creator
+                </Button>
+              )}
+              
+              {!user && (
+                <Button variant="secondary" className="flex-1" disabled>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Login to Join
                 </Button>
               )}
             </div>
@@ -397,7 +426,7 @@ export function ProjectView() {
         <Card>
           <CardHeader>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="tasks" active={activeTab === "tasks"}>
                   Tasks
                 </TabsTrigger>
@@ -486,7 +515,7 @@ export function ProjectView() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">Demo Preparation</h3>
-                    <Button size="sm">
+                    <Button size="sm" onClick={handleJoinDemo}>
                       <Video className="h-4 w-4 mr-2" />
                       Record Demo
                     </Button>
@@ -619,72 +648,10 @@ export function ProjectView() {
               </TabsContent>
 
               <TabsContent value="team" className="space-y-6">
-                {!project.team ? (
-                  <CreateTeamForm
-                    projectId={project.id}
-                    onTeamCreated={handleTeamCreated}
-                  />
-                ) : (
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                      <div>
-                        <CardTitle>{project.team.name}</CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          Manage your team members and roles.
-                        </p>
-                      </div>
-                      <InviteMemberForm
-                        teamId={project.team.id}
-                        onMemberInvited={handleMemberInvited}
-                      />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {teamMembers.map((member, index) => (
-                          <motion.div
-                            key={member.id}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="flex items-center space-x-3 p-4 border rounded-lg"
-                          >
-                            <Avatar>
-                              <AvatarImage
-                                src={member.avatarUrl}
-                                alt={member.firstName}
-                              />
-                              <AvatarFallback>
-                                {getAvatarFallback(
-                                  `${member.firstName} ${member.lastName}`
-                                )}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <p className="font-medium">
-                                {member.firstName} {member.lastName}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {member.role}
-                              </p>
-                              <div className="mt-2">
-                                <div className="flex justify-between text-xs mb-1">
-                                  <span>Progress</span>
-                                  <span>
-                                    {formatProgress(member.progress)}%
-                                  </span>
-                                </div>
-                                <Progress
-                                  value={formatProgress(member.progress)}
-                                  className="h-2"
-                                />
-                              </div>
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                <ProjectMembersManager 
+                  project={project} 
+                  currentUser={user}
+                />
               </TabsContent>
 
               <TabsContent value="details" className="space-y-6">
@@ -755,10 +722,12 @@ export function ProjectView() {
           </CardContent>
         </Card>
 
-        {/* AI Copilot */}
-        <Copilot
-          isOpen={copilotOpen}
-          onToggle={() => setCopilotOpen(!copilotOpen)}
+        {/* Join Project Request Modal */}
+        <JoinProjectRequest
+          project={project}
+          isOpen={showJoinRequest}
+          onClose={() => setShowJoinRequest(false)}
+          onRequestSent={handleJoinRequestSent}
         />
       </div>
     </motion.div>

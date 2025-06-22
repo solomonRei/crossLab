@@ -18,6 +18,8 @@ import { NotificationSettings } from "./pages/NotificationSettings";
 import { ProjectView } from "./pages/ProjectView";
 import { ProjectCreate } from "./pages/ProjectCreate";
 import { DemoPage } from "./pages/DemoPage";
+import { DemoJoinPage } from "./pages/DemoJoinPage";
+import { DemoRoom } from "./components/demo/DemoRoom";
 
 // Protected Route component
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -99,6 +101,10 @@ function App() {
               >
                 <Route index element={<DemoPage />} />
               </Route>
+
+              {/* Public demo routes - no authentication required */}
+              <Route path="/demo/join/:inviteCode" element={<DemoJoinPage />} />
+              <Route path="/demo/room/:sessionId" element={<DemoRoom />} />
 
               <Route
                 path="/profile"
