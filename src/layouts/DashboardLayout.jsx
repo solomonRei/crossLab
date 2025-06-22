@@ -14,14 +14,17 @@ import {
   Menu,
   X,
   LogOut,
-  Video
+  Video,
+  UserPlus
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Avatar, AvatarImage, AvatarFallback } from "../components/ui/Avatar";
 import { Badge } from "../components/ui/Badge";
 import { NotificationCenter } from "../components/NotificationCenter";
 import { Copilot } from "../components/Copilot";
+import { UserInvitations } from "../components/UserInvitations";
 import { useNotifications } from "../hooks/useNotifications";
+import { useInvitations } from "../hooks/useInvitations";
 import { useAuth } from "../contexts/AuthContext";
 import { useProfileStore } from "../store/userStore";
 import { getAvatarFallback } from "../lib/utils";
@@ -45,10 +48,13 @@ export function DashboardLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const [invitationsOpen, setInvitationsOpen] = useState(false);
 
   // Initialize notifications with user ID
-  const { getCounts } = useNotifications(user?.id || "anonymous");
-  const { unread: unreadCount } = getCounts();
+  const { unreadCount } = useNotifications(user?.id);
+  
+  // Initialize invitations with user ID
+  const { invitationsCount } = useInvitations(user?.id);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -248,6 +254,25 @@ export function DashboardLayout() {
               />
             </div>
 
+            {/* Invitations Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setInvitationsOpen(true)}
+              title="View Invitations"
+              className="relative"
+            >
+              <UserPlus className="h-5 w-5" />
+              {invitationsCount > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center"
+                >
+                  {invitationsCount > 9 ? "9+" : invitationsCount}
+                </Badge>
+              )}
+            </Button>
+
             <Button variant="ghost" size="icon">
               <MessageCircle className="h-5 w-5" />
             </Button>
@@ -277,6 +302,12 @@ export function DashboardLayout() {
       <Copilot
         isOpen={copilotOpen}
         onToggle={() => setCopilotOpen(!copilotOpen)}
+      />
+
+      {/* User Invitations Modal */}
+      <UserInvitations
+        isOpen={invitationsOpen}
+        onClose={() => setInvitationsOpen(false)}
       />
     </div>
   );

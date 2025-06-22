@@ -1615,6 +1615,235 @@ class AuthApiService {
       return { success: false, message: error.message };
     }
   }
+
+  // =================================================================
+  // User Invitations API Endpoints
+  // =================================================================
+
+  /**
+   * Get all pending invitations for current user
+   * Endpoint: GET /api/v1/users/invitations
+   * @returns {Promise} API response with invitations array
+   */
+  async getUserInvitations() {
+    try {
+      console.log('API: Getting user invitations');
+      const response = await this.request('/users/invitations');
+      console.log('API: User invitations response:', response);
+      return response;
+    } catch (error) {
+      console.error('Get user invitations error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  /**
+   * Accept project invitation
+   * Endpoint: POST /api/v1/users/invitations/{invitationId}/accept
+   * @param {string} invitationId - The invitation ID
+   * @returns {Promise} API response confirming acceptance
+   */
+  async acceptProjectInvitation(invitationId) {
+    try {
+      console.log('API: Accepting project invitation:', invitationId);
+      const response = await this.request(`/users/invitations/${invitationId}/accept`, {
+        method: 'POST'
+      });
+      console.log('API: Accept invitation response:', response);
+      return response;
+    } catch (error) {
+      console.error('Accept project invitation error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  /**
+   * Decline project invitation
+   * Endpoint: POST /api/v1/users/invitations/{invitationId}/decline
+   * @param {string} invitationId - The invitation ID
+   * @returns {Promise} API response confirming decline
+   */
+  async declineProjectInvitation(invitationId) {
+    try {
+      console.log('API: Declining project invitation:', invitationId);
+      const response = await this.request(`/users/invitations/${invitationId}/decline`, {
+        method: 'POST'
+      });
+      console.log('API: Decline invitation response:', response);
+      return response;
+    } catch (error) {
+      console.error('Decline project invitation error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  /**
+   * Accept team invitation
+   * Endpoint: POST /api/v1/users/team-invitations/{invitationId}/accept
+   * @param {string} invitationId - The team invitation ID
+   * @returns {Promise} API response confirming acceptance
+   */
+  async acceptTeamInvitation(invitationId) {
+    try {
+      console.log('API: Accepting team invitation:', invitationId);
+      const response = await this.request(`/users/team-invitations/${invitationId}/accept`, {
+        method: 'POST'
+      });
+      console.log('API: Accept team invitation response:', response);
+      return response;
+    } catch (error) {
+      console.error('Accept team invitation error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  /**
+   * Decline team invitation
+   * Endpoint: POST /api/v1/users/team-invitations/{invitationId}/decline
+   * @param {string} invitationId - The team invitation ID
+   * @returns {Promise} API response confirming decline
+   */
+  async declineTeamInvitation(invitationId) {
+    try {
+      console.log('API: Declining team invitation:', invitationId);
+      const response = await this.request(`/users/team-invitations/${invitationId}/decline`, {
+        method: 'POST'
+      });
+      console.log('API: Decline team invitation response:', response);
+      return response;
+    } catch (error) {
+      console.error('Decline team invitation error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  /**
+   * Get notifications with invitation filtering
+   * Endpoint: GET /api/v1/notifications?isRead=false&type=ProjectInvitation
+   * @param {Object} filters - Notification filters
+   * @returns {Promise} API response with notifications
+   */
+  async getInvitationNotifications(filters = {}) {
+    try {
+      console.log('API: Getting invitation notifications with filters:', filters);
+      
+      const queryParams = new URLSearchParams();
+      if (filters.isRead !== undefined) queryParams.append('isRead', filters.isRead);
+      if (filters.type) queryParams.append('type', filters.type);
+      
+      const url = `/notifications${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      const response = await this.request(url);
+      
+      console.log('API: Invitation notifications response:', response);
+      return response;
+    } catch (error) {
+      console.error('Get invitation notifications error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  /**
+   * Mark notification as read
+   * Endpoint: POST /api/v1/notifications/{notificationId}/mark-as-read
+   * @param {string} notificationId - The notification ID
+   * @returns {Promise} API response confirming read status
+   */
+  async markNotificationAsRead(notificationId) {
+    try {
+      console.log('API: Marking notification as read:', notificationId);
+      const response = await this.request(`/notifications/${notificationId}/mark-as-read`, {
+        method: 'POST'
+      });
+      console.log('API: Mark notification as read response:', response);
+      return response;
+    } catch (error) {
+      console.error('Mark notification as read error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  // =================================================================
+  // User Invitations Utility Methods
+  // =================================================================
+
+  /**
+   * Get pending project invitations only
+   * @returns {Promise} API response with project invitations
+   */
+  async getPendingProjectInvitations() {
+    try {
+      const response = await this.getUserInvitations();
+      if (response.success && response.data) {
+        const projectInvitations = response.data.filter(
+          invitation => invitation.relatedEntityType === 'Project' && invitation.isActive === false
+        );
+        return {
+          success: true,
+          data: projectInvitations,
+          message: `Found ${projectInvitations.length} pending project invitations`
+        };
+      }
+      return response;
+    } catch (error) {
+      console.error('Get pending project invitations error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  /**
+   * Get pending team invitations only
+   * @returns {Promise} API response with team invitations
+   */
+  async getPendingTeamInvitations() {
+    try {
+      const response = await this.getUserInvitations();
+      if (response.success && response.data) {
+        const teamInvitations = response.data.filter(
+          invitation => invitation.relatedEntityType === 'Team' && invitation.isActive === false
+        );
+        return {
+          success: true,
+          data: teamInvitations,
+          message: `Found ${teamInvitations.length} pending team invitations`
+        };
+      }
+      return response;
+    } catch (error) {
+      console.error('Get pending team invitations error:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  /**
+   * Get count of pending invitations
+   * @returns {Promise} Object with counts
+   */
+  async getInvitationsCount() {
+    try {
+      const response = await this.getUserInvitations();
+      if (response.success && response.data) {
+        const projectCount = response.data.filter(
+          inv => inv.relatedEntityType === 'Project' && inv.isActive === false
+        ).length;
+        const teamCount = response.data.filter(
+          inv => inv.relatedEntityType === 'Team' && inv.isActive === false
+        ).length;
+        
+        return {
+          success: true,
+          data: {
+            total: projectCount + teamCount,
+            projects: projectCount,
+            teams: teamCount
+          }
+        };
+      }
+      return { success: true, data: { total: 0, projects: 0, teams: 0 } };
+    } catch (error) {
+      console.error('Get invitations count error:', error);
+      return { success: false, data: { total: 0, projects: 0, teams: 0 } };
+    }
+  }
 }
 
 // Export singleton instance
