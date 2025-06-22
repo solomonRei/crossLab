@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./contexts/AuthContext";
+import { ToastProvider } from "./components/ui/Toast";
 
 // Layouts
 import { PublicLayout } from "./layouts/PublicLayout";
@@ -17,6 +17,7 @@ import { Review } from "./pages/Review";
 import { NotificationSettings } from "./pages/NotificationSettings";
 import { ProjectView } from "./pages/ProjectView";
 import { ProjectCreate } from "./pages/ProjectCreate";
+import { DemoPage } from "./pages/DemoPage";
 
 // Protected Route component
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -29,115 +30,106 @@ import { TokenStatus } from "./components/TokenStatus";
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="App">
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<PublicLayout />}>
-              <Route index element={<Home />} />
-              <Route path="about" element={<About />} />
-              <Route path="auth" element={<Auth />} />
-            </Route>
+      <ToastProvider>
+        <Router>
+          <div className="App">
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<PublicLayout />}>
+                <Route index element={<Home />} />
+                <Route path="about" element={<About />} />
+                <Route path="auth" element={<Auth />} />
+              </Route>
 
-            {/* Protected dashboard routes */}
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Projects />} />
-            </Route>
+              {/* Protected dashboard routes */}
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Projects />} />
+              </Route>
 
-            {/* Protected individual routes */}
-            <Route
-              path="/projects"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Projects />} />
-              <Route path="create" element={<ProjectCreate />} />
-              <Route path=":id" element={<ProjectView />} />
-            </Route>
+              {/* Protected individual routes */}
+              <Route
+                path="/projects"
+                element={
+                  <ProtectedRoute>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Projects />} />
+                <Route path="create" element={<ProjectCreate />} />
+                <Route path=":id" element={<ProjectView />} />
+              </Route>
 
-            <Route
-              path="/showcase"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Showcase />} />
-            </Route>
+              <Route
+                path="/showcase"
+                element={
+                  <ProtectedRoute>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Showcase />} />
+              </Route>
 
-            <Route
-              path="/reviews"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Review />} />
-            </Route>
+              <Route
+                path="/reviews"
+                element={
+                  <ProtectedRoute>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Review />} />
+              </Route>
 
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Profile />} />
-            </Route>
+              <Route
+                path="/demo"
+                element={
+                  <ProtectedRoute>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<DemoPage />} />
+              </Route>
 
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="notifications" element={<NotificationSettings />} />
-            </Route>
-          </Routes>
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Profile />} />
+              </Route>
 
-          {/* Toast notifications */}
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 3000,
-              success: {
-                duration: 3000,
-                style: {
-                  background: "#10B981",
-                  color: "white",
-                },
-              },
-              error: {
-                duration: 5000,
-                style: {
-                  background: "#EF4444",
-                  color: "white",
-                },
-              },
-            }}
-          />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="notifications" element={<NotificationSettings />} />
+              </Route>
+            </Routes>
 
-          {/* Development Tools - shown on all pages in development */}
-          <ApiSwitcher />
-          <DevToolsPanel />
-          <TokenStatus />
-        </div>
-      </Router>
+            {/* Development Tools - shown on all pages in development */}
+            <ApiSwitcher />
+            <DevToolsPanel />
+            <TokenStatus />
+          </div>
+        </Router>
+      </ToastProvider>
     </AuthProvider>
   );
 }
