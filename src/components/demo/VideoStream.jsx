@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   VideoOff, 
@@ -141,8 +141,8 @@ export const VideoStream = ({
   isVideoEnabled = true,
   userRole = 'participant'
 }) => {
-  const [pinnedParticipant, setPinnedParticipant] = React.useState(null);
-  const [layout, setLayout] = React.useState('grid'); // 'grid' | 'speaker'
+  const [pinnedParticipant, setPinnedParticipant] = useState(null);
+  const [layout, setLayout] = useState('grid'); // 'grid' | 'speaker'
 
   // Calculate grid layout based on number of participants
   const totalParticipants = 1 + remoteStreams.length; // +1 for local stream
