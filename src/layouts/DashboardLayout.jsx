@@ -1,11 +1,11 @@
-import { useState } from 'react'
-import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom'
-import { 
-  Home, 
-  FolderOpen, 
-  User, 
-  Trophy, 
-  FileCheck, 
+import { useState, useEffect } from "react";
+import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
+import {
+  Home,
+  FolderOpen,
+  User,
+  Trophy,
+  FileCheck,
   MessageCircle,
   Bell,
   Settings,
@@ -13,16 +13,17 @@ import {
   Sun,
   Menu,
   X,
-  LogOut
-} from 'lucide-react'
-import { Button } from '../components/ui/Button'
-import { Avatar, AvatarImage, AvatarFallback } from '../components/ui/Avatar'
-import { Badge } from '../components/ui/Badge'
-import { NotificationCenter } from '../components/NotificationCenter'
-import { useNotifications } from '../hooks/useNotifications'
-import { useAuth } from '../contexts/AuthContext'
-import { useProfileStore } from '../store/userStore'
-import { getAvatarFallback } from '../lib/utils'
+  LogOut,
+} from "lucide-react";
+import { Button } from "../components/ui/Button";
+import { Avatar, AvatarImage, AvatarFallback } from "../components/ui/Avatar";
+import { Badge } from "../components/ui/Badge";
+import { NotificationCenter } from "../components/NotificationCenter";
+import { useNotifications } from "../hooks/useNotifications";
+import { useAuth } from "../contexts/AuthContext";
+import { useProfileStore } from "../store/userStore";
+import { getAvatarFallback } from "../lib/utils";
+import { authApiService } from "../services/authApi";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -33,45 +34,72 @@ const navigation = [
 ];
 
 export function DashboardLayout() {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const { user, logout } = useAuth()
-  const [darkMode, setDarkMode] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [notificationCenterOpen, setNotificationCenterOpen] = useState(false)
-  
-  // Get profile data from store (for CV functionality)
-  const profileData = useProfileStore((state) => state.profileData)
-  
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const { profileData, setProfileData } = useProfileStore();
+  const [darkMode, setDarkMode] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
+
   // Initialize notifications with user ID
-  const { getCounts } = useNotifications(user?.id || 'anonymous')
-  const { unread: unreadCount } = getCounts()
+  const { getCounts } = useNotifications(user?.id || "anonymous");
+  const { unread: unreadCount } = getCounts();
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (user) {
+        try {
+          const res = await authApiService.getCurrentUser();
+          if (res.success && res.data) {
+            const { firstName, lastName, email, preferredRole, avatar } =
+              res.data;
+            const fullName = [firstName, lastName]
+              .filter(Boolean)
+              .join(" ")
+              .trim();
+            setProfileData({
+              ...profileData,
+              name: fullName || email || "User",
+              email: email,
+              preferredRole: preferredRole,
+              avatar: avatar,
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching user in layout:", error);
+        }
+      }
+    };
+    fetchUser();
+  }, [user, setProfileData]);
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
     document.documentElement.classList.toggle("dark");
+    navigate("/");
   };
 
   const handleNotificationClick = () => {
-    setNotificationCenterOpen(!notificationCenterOpen)
-  }
+    setNotificationCenterOpen(!notificationCenterOpen);
+  };
 
   const handleLogout = () => {
-    logout()
-    navigate('/')
-  }
+    logout();
+    navigate("/");
+  };
 
-  // Use profile data if available, otherwise fallback to auth user data
-  const currentUser = {
-    ...user,
-    name: profileData.name || (user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.firstName || user?.email || 'User'),
-    role: profileData.role || user?.role || 'User',
-    avatar: profileData.avatar || user?.avatar,
-    level: profileData.level,
-    xp: profileData.xp
-  }
+  // Use profile data from the store
+  const displayName = profileData?.name || "User";
 
-  const displayName = currentUser.name || 'User'
+  const displayRole =
+    profileData?.preferredRole && profileData.preferredRole !== "NotSet"
+      ? profileData.preferredRole
+      : null;
+
+  const avatarUrl =
+    profileData?.avatar ||
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex";
 
   return (
     <div className="flex h-screen bg-background">
@@ -122,32 +150,40 @@ export function DashboardLayout() {
           </nav>
 
           {/* User Profile */}
-          <div className="p-4 border-t">
-            <div className="flex items-center space-x-3">
-              <Avatar>
-                <AvatarImage src={currentUser.avatar} alt={displayName} />
-                <AvatarFallback>{getAvatarFallback(displayName)}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <p className="text-sm font-medium">{displayName}</p>
-                <p className="text-xs text-muted-foreground">{currentUser.role}</p>
+          <div className="mt-auto">
+            <div className="p-4 border-t">
+              <div className="flex items-center space-x-3">
+                <Avatar>
+                  <AvatarImage src={avatarUrl} alt={displayName} />
+                  <AvatarFallback>
+                    {getAvatarFallback(displayName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{displayName}</p>
+                  {displayRole && (
+                    <p className="text-xs text-muted-foreground">
+                      {displayRole}
+                    </p>
+                  )}
+                </div>
               </div>
+
+              {/* Level and XP (if available from CV) */}
+              {profileData?.level && (
+                <div className="mt-3 flex items-center justify-between">
+                  <Badge variant="secondary" className="text-xs">
+                    Level {profileData.level}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {profileData.xp} XP
+                  </span>
+                </div>
+              )}
             </div>
-            
-            {/* Level and XP (if available from CV) */}
-            {currentUser.level && (
-              <div className="mt-3 flex items-center justify-between">
-                <Badge variant="secondary" className="text-xs">
-                  Level {currentUser.level}
-                </Badge>
-                <span className="text-xs text-muted-foreground">
-                  {currentUser.xp} XP
-                </span>
-              </div>
-            )}
-            
+
             {/* Logout Button */}
-            <div className="mt-3">
+            <div className="p-4 border-t">
               <Button
                 variant="ghost"
                 size="sm"
@@ -163,9 +199,9 @@ export function DashboardLayout() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden bg-muted/40">
         {/* Top Bar */}
-        <header className="h-16 bg-card border-b flex items-center justify-between px-6">
+        <header className="h-16 bg-card border-b flex items-center justify-between px-6 shrink-0">
           <Button
             variant="ghost"
             size="icon"
@@ -183,31 +219,31 @@ export function DashboardLayout() {
                 <Moon className="h-5 w-5" />
               )}
             </Button>
-            
+
             <div className="relative">
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={handleNotificationClick}
                 className="relative"
               >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
-                  <Badge 
-                    variant="destructive" 
+                  <Badge
+                    variant="destructive"
                     className="absolute -top-1 -right-1 h-5 w-5 text-xs p-0 flex items-center justify-center"
                   >
-                    {unreadCount > 9 ? '9+' : unreadCount}
+                    {unreadCount > 9 ? "9+" : unreadCount}
                   </Badge>
                 )}
               </Button>
-              
-              <NotificationCenter 
+
+              <NotificationCenter
                 isOpen={notificationCenterOpen}
                 onClose={() => setNotificationCenterOpen(false)}
               />
             </div>
-            
+
             <Button variant="ghost" size="icon">
               <MessageCircle className="h-5 w-5" />
             </Button>
@@ -220,7 +256,7 @@ export function DashboardLayout() {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 lg:p-10 flex flex-col">
           <Outlet />
         </main>
       </div>

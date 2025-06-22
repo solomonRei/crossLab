@@ -220,6 +220,14 @@ class AuthApiService {
     return await this.request("/auth/me");
   }
 
+  async updateUserProfile(profileData) {
+    devLog("Updating user profile:", profileData);
+    return this.request("/auth/me", {
+      method: "PUT",
+      body: JSON.stringify(profileData),
+    });
+  }
+
   async getProjectById(projectId) {
     devLog(`Fetching project data for ID: ${projectId}`);
     return this.request(`/projects/${projectId}`);
