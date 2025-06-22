@@ -41,7 +41,8 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { authApiService } from '../services/authApi';
-import { formatDate, getAvatarFallback } from '../lib/utils';
+import { notificationService } from '../services/notificationService';
+import { formatDate, getAvatarFallback, getDisplayName } from '../lib/utils';
 import { CreateTaskModal } from './CreateTaskModal';
 import { TaskDetailModal } from './TaskDetailModal';
 
@@ -114,7 +115,7 @@ const SortableTaskCard = ({ task, users, onTaskClick }) => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       whileHover={{ scale: 1.02 }}
-      className="mb-4 group"
+      className="mb-3 group flex-shrink-0"
     >
       <Card 
         className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-0 shadow-sm ${
@@ -238,7 +239,7 @@ const SortableTaskCard = ({ task, users, onTaskClick }) => {
                     </Avatar>
                     <div className="flex flex-col">
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {assignee.firstName} {assignee.lastName}
+                        {getDisplayName(assignee)}
                       </span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
                         {assignee.projectRole || 'Member'}
@@ -288,11 +289,13 @@ const TaskColumn = ({ column, tasks, users, onAddTask, onTaskClick }) => {
     id: column.id,
   });
   
+  console.log(`Column ${column.id} has ${tasks.length} tasks:`, tasks.map(t => t.title));
+  
   return (
-    <div className={`rounded-xl p-5 ${column.color} min-h-[600px] transition-all duration-200 ${
+    <div className={`rounded-xl p-5 ${column.color} min-h-[600px] max-h-[800px] flex flex-col transition-all duration-200 ${
       isOver ? 'ring-2 ring-blue-200 dark:ring-blue-800 bg-opacity-70' : ''
     }`}>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg ${column.badgeColor} bg-opacity-10`}>
             <Icon className={`h-5 w-5 ${column.badgeColor.replace('bg-', 'text-')}`} />
@@ -308,33 +311,44 @@ const TaskColumn = ({ column, tasks, users, onAddTask, onTaskClick }) => {
           variant="ghost"
           size="sm"
           onClick={() => onAddTask(column.id)}
-          className="h-9 w-9 p-0 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50"
+          className="h-9 w-9 p-0 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50 flex-shrink-0"
         >
           <Plus className="h-4 w-4" />
         </Button>
       </div>
 
-      <SortableContext items={tasks.map(task => task.id)} strategy={verticalListSortingStrategy}>
-        <div ref={setNodeRef} className="min-h-[500px] space-y-3">
-          <AnimatePresence>
-            {tasks.map((task) => (
-              <SortableTaskCard
-                key={task.id}
-                task={task}
-                users={users}
-                onTaskClick={onTaskClick}
-              />
-            ))}
-          </AnimatePresence>
-          
-          {/* Empty state for column */}
-          {tasks.length === 0 && (
-            <div className="flex items-center justify-center h-32 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
-              <p className="text-sm text-gray-500 dark:text-gray-400">No tasks</p>
-            </div>
-          )}
-        </div>
-      </SortableContext>
+      {/* Droppable area that covers the entire column */}
+      <div 
+        ref={setNodeRef} 
+        className="flex-1 min-h-[400px] relative"
+      >
+        <SortableContext items={tasks.map(task => task.id)} strategy={verticalListSortingStrategy}>
+          <div 
+            className="overflow-y-auto overflow-x-hidden space-y-3 pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent absolute inset-0"
+          >
+            <AnimatePresence>
+              {tasks.map((task) => (
+                <SortableTaskCard
+                  key={task.id}
+                  task={task}
+                  users={users}
+                  onTaskClick={onTaskClick}
+                />
+              ))}
+            </AnimatePresence>
+            
+            {/* Empty state for column - also acts as drop target */}
+            {tasks.length === 0 && (
+              <div className="flex items-center justify-center h-32 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Drop tasks here</p>
+              </div>
+            )}
+            
+            {/* Extra drop space at the bottom */}
+            <div className="h-20 w-full" />
+          </div>
+        </SortableContext>
+      </div>
     </div>
   );
 };
@@ -407,6 +421,7 @@ export const TaskBoard = ({ projectId, sprintId = null }) => {
 
   // Handle drag start
   const handleDragStart = (event) => {
+    console.log('Drag start:', event.active.id);
     setActiveId(event.active.id);
   };
 
@@ -415,15 +430,38 @@ export const TaskBoard = ({ projectId, sprintId = null }) => {
     const { active, over } = event;
     setActiveId(null);
 
-    if (!over) return;
+    if (!over) {
+      console.log('No drop target found');
+      return;
+    }
 
     const activeTask = tasks.find(task => task.id === active.id);
-    const overId = over.id;
+    if (!activeTask) {
+      console.log('Active task not found');
+      return;
+    }
 
-    // Check if dropped over a column
-    const targetStatus = Object.keys(TASK_COLUMNS).find(status => overId === status);
+    console.log('Drag end:', { activeId: active.id, overId: over.id, activeTask });
+
+    // Check if dropped over a column (could be the column id directly or a task within a column)
+    let targetStatus = over.id;
+    
+    // If dropped over a task, find which column that task belongs to
+    if (!Object.keys(TASK_COLUMNS).includes(over.id)) {
+      const overTask = tasks.find(task => task.id === over.id);
+      if (overTask) {
+        targetStatus = overTask.status;
+        console.log('Dropped over task, using its status:', targetStatus);
+      } else {
+        console.log('Could not determine target status');
+        return;
+      }
+    }
     
     if (targetStatus && activeTask && activeTask.status !== targetStatus) {
+      const oldStatus = activeTask.status;
+      console.log(`Moving task from ${oldStatus} to ${targetStatus}`);
+      
       try {
         let response;
         
@@ -464,15 +502,50 @@ export const TaskBoard = ({ projectId, sprintId = null }) => {
             return newTasks;
           });
 
+          // Create automatic notifications for status changes
+          const updatedTask = response.data || { ...activeTask, status: targetStatus };
+          
+          // Get current user ID for notification context
+          const currentUser = await authApiService.getCurrentUser();
+          const currentUserId = currentUser.success ? currentUser.data?.id : null;
+          
+          // Send appropriate notifications based on status change
+          if (targetStatus === 'review') {
+            // Notify team members that task needs review
+            await notificationService.notifyTaskSubmittedForReview(
+              updatedTask, 
+              currentUserId
+            );
+          } else if (targetStatus === 'completed') {
+            // Notify team about task completion
+            await notificationService.notifyTaskCompleted(
+              updatedTask, 
+              currentUserId
+            );
+          } else {
+            // General status change notification
+            await notificationService.notifyTaskStatusChanged(
+              updatedTask,
+              oldStatus,
+              targetStatus,
+              currentUserId
+            );
+          }
+
           toast.success(
             'Task Status Updated', 
             `Task "${activeTask.title}" moved to ${TASK_COLUMNS[targetStatus].title}`
           );
+        } else {
+          console.error('API response failed:', response);
+          toast.error('Update Failed', response.message || 'Failed to update task status');
         }
       } catch (err) {
         console.error('Failed to update task status:', err);
         toast.error('Update Failed', 'Failed to update task status');
       }
+    } else {
+      console.log('No status change needed or invalid drop');
     }
   };
 
@@ -559,7 +632,7 @@ export const TaskBoard = ({ projectId, sprintId = null }) => {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 h-[calc(100vh-200px)] overflow-hidden">
           {Object.values(TASK_COLUMNS).map(column => (
             <TaskColumn
               key={column.id}
@@ -574,11 +647,13 @@ export const TaskBoard = ({ projectId, sprintId = null }) => {
 
         <DragOverlay>
           {activeTask ? (
-            <SortableTaskCard
-              task={activeTask}
-              users={users}
-              onTaskClick={() => {}}
-            />
+            <div className="rotate-6 opacity-90">
+              <SortableTaskCard
+                task={activeTask}
+                users={users}
+                onTaskClick={() => {}}
+              />
+            </div>
           ) : null}
         </DragOverlay>
       </DndContext>

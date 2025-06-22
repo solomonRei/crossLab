@@ -39,7 +39,8 @@ import {
   X
 } from 'lucide-react';
 import { authApiService } from '../services/authApi';
-import { formatDate, getAvatarFallback } from '../lib/utils';
+import { notificationService } from '../services/notificationService';
+import { formatDate, getAvatarFallback, getDisplayName } from '../lib/utils';
 import { CreateTaskModal } from './CreateTaskModal';
 
 const PRIORITY_COLORS = {
@@ -95,7 +96,7 @@ const TaskComment = ({ comment, currentUser }) => {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="font-medium text-sm text-gray-900 dark:text-gray-100">
-                {comment.author?.firstName} {comment.author?.lastName}
+                {getDisplayName(comment.author)}
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
                 {formatDate(comment.createdAt)}
@@ -166,7 +167,7 @@ const TaskHeader = ({ task, assignee, onEdit, onDelete, isOverdue }) => {
                 </Avatar>
                 <div>
                   <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">
-                    {assignee.firstName} {assignee.lastName}
+                    {getDisplayName(assignee)}
                   </span>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     {assignee.projectRole || 'Member'}
@@ -258,7 +259,7 @@ const TaskDetails = ({ task, assignee, isOverdue }) => {
                     </Avatar>
                     <div>
                       <div className="text-xs font-semibold text-gray-900 dark:text-gray-100">
-                        {assignee.firstName} {assignee.lastName}
+                        {getDisplayName(assignee)}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
                         {assignee.projectRole || 'Member'}
@@ -516,7 +517,12 @@ export const TaskDetailModal = ({ task, isOpen, onClose, users = [] }) => {
           id: '1',
           content: 'Task created and ready for development.',
           authorId: task.createdBy,
-          author: users.find(u => u.id === task.createdBy) || { firstName: 'System', lastName: '' },
+          author: users.find(u => u.id === task.createdBy) || { 
+            firstName: 'System', 
+            lastName: '', 
+            userName: 'system',
+            email: 'system@crosslab.com'
+          },
           createdAt: task.createdAt || new Date().toISOString()
         }
       ]);
@@ -531,6 +537,7 @@ export const TaskDetailModal = ({ task, isOpen, onClose, users = [] }) => {
       let response;
       let newStatus;
       let actionText;
+      const oldStatus = task.status;
       
       switch (action) {
         case 'start':
@@ -579,6 +586,31 @@ export const TaskDetailModal = ({ task, isOpen, onClose, users = [] }) => {
           createdAt: new Date().toISOString()
         };
         setComments(prev => [...prev, comment]);
+
+        // Send automatic notifications for status changes
+        const updatedTask = response.data || { ...task, status: newStatus };
+        
+        if (newStatus === 'review') {
+          // Notify team members that task needs review
+          await notificationService.notifyTaskSubmittedForReview(
+            updatedTask, 
+            currentUser?.id
+          );
+        } else if (newStatus === 'completed') {
+          // Notify team about task completion
+          await notificationService.notifyTaskCompleted(
+            updatedTask, 
+            currentUser?.id
+          );
+        } else {
+          // General status change notification
+          await notificationService.notifyTaskStatusChanged(
+            updatedTask,
+            oldStatus,
+            newStatus,
+            currentUser?.id
+          );
+        }
 
         // Show success notification
         toast.success('Task Updated', `Task has been ${actionText} successfully`);

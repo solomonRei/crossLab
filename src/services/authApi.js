@@ -430,6 +430,8 @@ class AuthApiService {
       assigneeId: (taskData.assigneeId === 'unassigned' || !taskData.assigneeId) ? null : taskData.assigneeId
     };
     
+    devLog("Mapped task data for API:", apiTaskData);
+    
     const response = await this.request("/tasks", {
       method: "POST",
       body: JSON.stringify(apiTaskData),
@@ -442,6 +444,7 @@ class AuthApiService {
         status: this.mapTaskStatusFromApi(response.data.status),
         priority: this.mapTaskPriorityFromApi(response.data.priority)
       };
+      devLog("Mapped response data from API:", response.data);
     }
     
     return response;
@@ -467,6 +470,8 @@ class AuthApiService {
       assigneeId: (taskData.assigneeId === 'unassigned' || !taskData.assigneeId) ? null : taskData.assigneeId
     };
     
+    devLog("Mapped task data for API:", apiTaskData);
+    
     const response = await this.request(`/tasks/${taskId}`, {
       method: "PUT",
       body: JSON.stringify(apiTaskData),
@@ -479,6 +484,7 @@ class AuthApiService {
         status: this.mapTaskStatusFromApi(response.data.status),
         priority: this.mapTaskPriorityFromApi(response.data.priority)
       };
+      devLog("Mapped response data from API:", response.data);
     }
     
     return response;
@@ -517,7 +523,6 @@ class AuthApiService {
     const response = await this.request(`/tasks/${taskId}/assign`, {
       method: "PATCH",
       body: JSON.stringify({
-        taskId,
         assigneeId: assigneeId || null // Allow unassigning by passing null
       }),
     });
@@ -544,15 +549,16 @@ class AuthApiService {
   async updateTaskStatus(taskId, statusData) {
     devLog(`Updating task ${taskId} status:`, statusData);
     
-    // Map frontend status to API format
-    const apiStatusData = {
-      taskId,
-      status: this.mapTaskStatusToApi(statusData.status)
-    };
+    // Map frontend status to API format and send just the status string
+    const apiStatus = this.mapTaskStatusToApi(statusData.status);
+    
+    devLog(`Sending status update: ${apiStatus} for task: ${taskId}`);
     
     const response = await this.request(`/tasks/${taskId}/status`, {
       method: "PATCH",
-      body: JSON.stringify(apiStatusData),
+      body: JSON.stringify({
+        status: apiStatus
+      }),
     });
     
     // Map response back to frontend format
@@ -777,46 +783,46 @@ class AuthApiService {
   // Helper Methods for Status/Priority Mapping
   // =================================================================
   
-  // Map frontend status to API enum
+  // Map frontend status to API string format
   mapTaskStatusToApi(status) {
     const statusMap = {
-      'todo': 0,        // Todo
-      'in-progress': 1, // InProgress  
-      'review': 2,      // Review
-      'completed': 3    // Completed
+      'todo': 'Todo',
+      'in-progress': 'InProgress',  
+      'review': 'Review',
+      'completed': 'Completed'
     };
-    return statusMap[status] !== undefined ? statusMap[status] : 0;
+    return statusMap[status] || 'Todo';
   }
   
-  // Map API enum to frontend status
+  // Map API string to frontend status
   mapTaskStatusFromApi(status) {
     const statusMap = {
-      0: 'todo',        // Todo
-      1: 'in-progress', // InProgress
-      2: 'review',      // Review
-      3: 'completed'    // Completed
+      'Todo': 'todo',
+      'InProgress': 'in-progress',
+      'Review': 'review', 
+      'Completed': 'completed'
     };
     return statusMap[status] || 'todo';
   }
   
-  // Map frontend priority to API enum
+  // Map frontend priority to API string format
   mapTaskPriorityToApi(priority) {
     const priorityMap = {
-      'low': 0,      // Low
-      'medium': 1,   // Medium
-      'high': 2,     // High
-      'urgent': 3    // Urgent
+      'low': 'Low',
+      'medium': 'Medium',
+      'high': 'High',
+      'urgent': 'Urgent'
     };
-    return priorityMap[priority] !== undefined ? priorityMap[priority] : 1;
+    return priorityMap[priority] || 'Medium';
   }
   
-  // Map API enum to frontend priority
+  // Map API string to frontend priority
   mapTaskPriorityFromApi(priority) {
     const priorityMap = {
-      0: 'low',      // Low
-      1: 'medium',   // Medium
-      2: 'high',     // High
-      3: 'urgent'    // Urgent
+      'Low': 'low',
+      'Medium': 'medium',
+      'High': 'high',
+      'Urgent': 'urgent'
     };
     return priorityMap[priority] || 'medium';
   }
@@ -953,8 +959,182 @@ class AuthApiService {
       };
     }
   }
+
+  // =================================================================
+  // Notifications API Endpoints (Based on Swagger API)
+  // =================================================================
+  
+  /**
+   * Get user notifications with optional filters
+   * Endpoint: GET /api/v1/Notifications
+   * @param {Object} filters - Optional filters (isRead, type, skip, take)
+   * @returns {Promise} API response with notifications array
+   */
+  async getNotifications(filters = {}) {
+    devLog("Fetching notifications with filters:", filters);
+    
+    const queryParams = new URLSearchParams();
+    if (filters.isRead !== undefined) queryParams.append('isRead', filters.isRead);
+    if (filters.type) queryParams.append('type', filters.type);
+    if (filters.skip !== undefined) queryParams.append('skip', filters.skip);
+    if (filters.take !== undefined) queryParams.append('take', filters.take);
+    
+    const queryString = queryParams.toString();
+    const url = `/notifications${queryString ? `?${queryString}` : ''}`;
+    
+    const response = await this.request(url);
+    
+    // Map API response to frontend format if needed
+    if (response.success && response.data) {
+      response.data = response.data.map(notification => ({
+        ...notification,
+        // Map API enum to frontend format if needed
+        type: this.mapNotificationTypeFromApi(notification.type),
+        priority: this.mapNotificationPriorityFromApi(notification.priority)
+      }));
+    }
+    
+    return response;
+  }
+
+  /**
+   * Create mention notification
+   * Endpoint: POST /api/v1/Notifications/mention
+   * @param {Object} mentionData - Mention notification data
+   * @returns {Promise} API response with created notifications
+   */
+  async createMentionNotification(mentionData) {
+    devLog("Creating mention notification:", mentionData);
+    
+    const response = await this.request("/notifications/mention", {
+      method: "POST",
+      body: JSON.stringify(mentionData),
+    });
+    
+    // Map response back to frontend format
+    if (response.success && response.data) {
+      response.data = response.data.map(notification => ({
+        ...notification,
+        type: this.mapNotificationTypeFromApi(notification.type),
+        priority: this.mapNotificationPriorityFromApi(notification.priority)
+      }));
+    }
+    
+    return response;
+  }
+
+  /**
+   * Mark notification as read
+   * Endpoint: PATCH /api/v1/Notifications/{id}/read
+   * @param {string} notificationId - The notification ID
+   * @returns {Promise} API response confirming read status
+   */
+  async markNotificationAsRead(notificationId) {
+    devLog(`Marking notification as read: ${notificationId}`);
+    
+    return await this.request(`/notifications/${notificationId}/read`, {
+      method: "PATCH",
+    });
+  }
+
+  // =================================================================
+  // Notification Type/Priority Mapping
+  // =================================================================
+  
+  // Map API notification type to frontend format
+  mapNotificationTypeFromApi(type) {
+    const typeMap = {
+      'TaskAssigned': 'task_assigned',
+      'TaskStatusChanged': 'task_status_changed', 
+      'TaskSubmittedForReview': 'task_review',
+      'TaskCompleted': 'task_completed',
+      'ProjectInvitation': 'team_invite',
+      'ProjectMilestone': 'project_update',
+      'Mention': 'mention',
+      'PeerReviewRequired': 'review_request',
+      'General': 'general'
+    };
+    return typeMap[type] || type.toLowerCase();
+  }
+  
+  // Map frontend notification type to API format
+  mapNotificationTypeToApi(type) {
+    const typeMap = {
+      'task_assigned': 'TaskAssigned',
+      'task_status_changed': 'TaskStatusChanged',
+      'task_review': 'TaskSubmittedForReview', 
+      'task_completed': 'TaskCompleted',
+      'team_invite': 'ProjectInvitation',
+      'project_update': 'ProjectMilestone',
+      'mention': 'Mention',
+      'review_request': 'PeerReviewRequired',
+      'general': 'General'
+    };
+    return typeMap[type] || 'General';
+  }
+  
+  // Map API notification priority to frontend format
+  mapNotificationPriorityFromApi(priority) {
+    const priorityMap = {
+      'Low': 'low',
+      'Normal': 'normal',
+      'High': 'high', 
+      'Urgent': 'urgent'
+    };
+    return priorityMap[priority] || 'normal';
+  }
+  
+  // Map frontend notification priority to API format
+  mapNotificationPriorityToApi(priority) {
+    const priorityMap = {
+      'low': 'Low',
+      'normal': 'Normal',
+      'high': 'High',
+      'urgent': 'Urgent'
+    };
+    return priorityMap[priority] || 'Normal';
+  }
+
+  // =================================================================
+  // Notification Utility Methods
+  // =================================================================
+  
+  // Get unread notifications count
+  async getUnreadNotificationsCount() {
+    try {
+      const response = await this.getNotifications({ isRead: false, take: 1 });
+      if (response.success) {
+        // If API doesn't return count directly, we can estimate or make another call
+        return response.data?.length || 0;
+      }
+      return 0;
+    } catch (err) {
+      devLog("Failed to get unread notifications count:", err);
+      return 0;
+    }
+  }
+  
+  // Get notifications by type
+  async getNotificationsByType(type, filters = {}) {
+    return this.getNotifications({ 
+      ...filters, 
+      type: this.mapNotificationTypeToApi(type) 
+    });
+  }
+  
+  // Get high priority notifications
+  async getHighPriorityNotifications(filters = {}) {
+    // Note: API doesn't seem to support priority filtering directly
+    // We'll filter on frontend side after getting notifications
+    const response = await this.getNotifications(filters);
+    if (response.success && response.data) {
+      response.data = response.data.filter(n => n.priority === 'high' || n.priority === 'urgent');
+    }
+    return response;
+  }
 }
 
 // Export singleton instance
 export const authApiService = new AuthApiService();
 export default authApiService;
+

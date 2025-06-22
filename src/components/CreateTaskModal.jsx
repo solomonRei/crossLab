@@ -33,7 +33,8 @@ import {
   Target
 } from 'lucide-react';
 import { authApiService } from '../services/authApi';
-import { formatDate, getAvatarFallback } from '../lib/utils';
+import { notificationService } from '../services/notificationService';
+import { formatDate, getAvatarFallback, getDisplayName } from '../lib/utils';
 import { cn } from '../lib/utils';
 import { useToast } from './ui/Toast';
 
@@ -223,6 +224,37 @@ export const CreateTaskModal = ({
       console.log('Task creation response:', response);
 
       if (response.success && response.data) {
+        // Send notifications for new task creation and assignment
+        const createdTask = response.data;
+        
+        // Get current user for notification context
+        const currentUser = await authApiService.getCurrentUser();
+        const currentUserId = currentUser.success ? currentUser.data?.id : null;
+        
+        if (!task) {
+          // This is a new task creation
+          if (createdTask.assigneeId && createdTask.assigneeId !== currentUserId) {
+            // Notify the assigned user
+            await notificationService.notifyTaskAssigned(
+              createdTask,
+              createdTask.assigneeId,
+              currentUserId
+            );
+          }
+        } else {
+          // This is an edit - check if assignee changed
+          if (task.assigneeId !== createdTask.assigneeId) {
+            if (createdTask.assigneeId && createdTask.assigneeId !== currentUserId) {
+              // Notify new assignee
+              await notificationService.notifyTaskAssigned(
+                createdTask,
+                createdTask.assigneeId,
+                currentUserId
+              );
+            }
+          }
+        }
+        
         onTaskCreated(response.data);
         onClose();
         
@@ -305,7 +337,7 @@ export const CreateTaskModal = ({
                             {getAvatarFallback(selectedAssignee.firstName, selectedAssignee.lastName)}
                           </AvatarFallback>
                         </Avatar>
-                        <span>{selectedAssignee.firstName} {selectedAssignee.lastName}</span>
+                        <span>{getDisplayName(selectedAssignee)}</span>
                       </div>
                     )}
                   </SelectValue>
@@ -326,7 +358,7 @@ export const CreateTaskModal = ({
                             {getAvatarFallback(user.firstName, user.lastName)}
                           </AvatarFallback>
                         </Avatar>
-                        <span>{user.firstName} {user.lastName}</span>
+                        <span>{getDisplayName(user)}</span>
                       </div>
                     </SelectItem>
                   ))}

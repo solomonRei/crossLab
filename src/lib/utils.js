@@ -31,4 +31,36 @@ export function getAvatarFallback(firstName, lastName) {
 
 export function generateId() {
   return Math.random().toString(36).substr(2, 9)
+}
+
+export function getDisplayName(user) {
+  if (!user) return 'Unknown User';
+  
+  // Try to build full name from firstName and lastName
+  const firstName = user.firstName?.trim();
+  const lastName = user.lastName?.trim();
+  
+  if (firstName && lastName) {
+    return `${firstName} ${lastName}`;
+  }
+  
+  if (firstName) {
+    return firstName;
+  }
+  
+  if (lastName) {
+    return lastName;
+  }
+  
+  // Fallback to username or email
+  if (user.userName?.trim()) {
+    return user.userName.trim();
+  }
+  
+  if (user.email?.trim()) {
+    return user.email.trim();
+  }
+  
+  // Last resort
+  return 'Unnamed User';
 } 
